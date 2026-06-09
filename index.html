@@ -145,6 +145,8 @@
 
   var scans = [];          // In-memory only. Sheet is source of truth.
   var processing = false, pendingCode = null, qr = null;
+
+  function findScan(c) { for (var i = 0; i < scans.length; i++) { if (scans[i].code === c) return scans[i]; } return null; }
   var CI = '\uD83D\uDCF7', CHK = '\u2705', WARN = '\u26A0\uFE0F';
 
   // ── SCANNER ──────────────────────────────────────────────

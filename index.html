@@ -168,7 +168,6 @@
     try { navigator.vibrate(100); } catch(e) {}
     flashLine(c);
 
-    // Always show modal. Server decides if duplicate.
     pendingCode = c;
     document.getElementById('modalCode').textContent = '\uD83D\uDCE6 ' + c;
     document.getElementById('modalNameInput').value = '';
@@ -177,6 +176,13 @@
     document.getElementById('savingIndicator').style.display = 'none';
     document.getElementById('nameModal').classList.add('active');
     setTimeout(function(){document.getElementById('modalNameInput').focus();},300);
+
+    // Check sheet in real-time for duplicate warning
+    sheetFind(c).then(function(d) {
+      if (d && d.found) {
+        document.getElementById('dupWarning').style.display = 'block';
+      }
+    });
   }
 
   function saveName() {
@@ -286,6 +292,14 @@
   function sheetUrl(params) {
     params._cb = Date.now();
     return cfg.scriptUrl + '?' + new URLSearchParams(params).toString();
+  }
+
+  function sheetFind(code) {
+    if (!cfg.scriptUrl) return Promise.reject();
+    return fetch(sheetUrl({ action: 'find', code: code }), { cache: 'no-store' })
+      .then(function(r) { return r.ok ? r.json() : Promise.reject(); })
+      .then(function(d) { return d && d.error ? null : d; })
+      .catch(function() { return null; });
   }
 
   function refreshFromSheet() {

@@ -188,7 +188,8 @@
     const STATE_KEY = 'barcode_scanner_state';
     const CONFIG_KEY = 'dupliscan_config';
     let scans = JSON.parse(localStorage.getItem(STATE_KEY)) || [];
-    let html5QrcodeScanner = null;
+    let html5QrCode = null;
+    let isScanPaused = false;
     let pendingCode = null;
     let pendingDesc = null;
     let config = JSON.parse(localStorage.getItem(CONFIG_KEY)) || { scriptUrl: '' };
@@ -197,21 +198,53 @@
 
     function startScanner() {
       try {
-        html5QrcodeScanner = new Html5QrcodeScanner(
-          "scanner-container",
-          { fps: 10, qrbox: { width: 250, height: 150 }, aspectRatio: 1.0 },
-          false
-        );
-        html5QrcodeScanner.render(onScanSuccess, onScanError);
+        html5QrCode = new Html5Qrcode("scanner-container");
+        html5QrCode.start(
+          { facingMode: "environment" },
+          {
+            fps: 15,
+            qrbox: function(viewfinderWidth, viewfinderHeight) {
+              const minSize = Math.min(viewfinderWidth, viewfinderHeight) * 0.7;
+              return { width: minSize, height: minSize * 0.5 };
+            }
+          },
+          onScanSuccess,
+          onScanError
+        ).catch(function(err) {
+          document.getElementById('scanner-container').innerHTML =
+            '<p style="color:#ff6b6b;padding:20px;text-align:center;">Error cámara: ' + err + '</p>';
+        });
       } catch(e) {
         document.getElementById('scanner-container').innerHTML =
-          '<p style="color:#ff6b6b;padding:20px;text-align:center;">Error al iniciar la cámara. Usá HTTPS o localhost.</p>';
+          '<p style="color:#ff6b6b;padding:20px;text-align:center;">Error al iniciar: ' + e.message + '</p>';
       }
     }
 
-    function onScanSuccess(decodedText) {
+    // Pause scanner while modal is open to avoid duplicate triggers
+    function pauseScanner() {
+      isScanPaused = true;
+    }
+    function resumeScanner() {
+      isScanPaused = false;
+    }
+
+    function onScanSuccess(decodedText, decodedResult) {
+      if (isScanPaused) return;
       const code = decodedText.trim();
       if (!code) return;
+
+      // Vibrate on scan
+      try { navigator.vibrate(100); } catch(e) {}
+
+      // Flash feedback on lastScan
+      const ls = document.getElementById('lastScan');
+      ls.style.transition = 'none';
+      ls.style.background = '#1d4ed8';
+      setTimeout(function() { ls.style.background = '#1a1a2e'; }, 200);
+
+      // Brief pause to avoid re-scanning the same code
+      isScanPaused = true;
+      setTimeout(function() { isScanPaused = false; }, 2000);
 
       const existing = scans.find(s => s.code === code);
       if (existing) {
@@ -237,12 +270,13 @@
             showAlert('✅ Cargado desde Sheet: ' + (s.name || code), 'success');
             sendToSheet(s);
           } else {
+            pauseScanner();
             pendingCode = code;
             document.getElementById('modalCode').textContent = '📦 ' + code;
             document.getElementById('modalNameInput').value = '';
             document.getElementById('modalDescInput').value = '';
             document.getElementById('nameModal').classList.add('active');
-            setTimeout(() => document.getElementById('modalNameInput').focus(), 300);
+            setTimeout(function() { document.getElementById('modalNameInput').focus(); }, 300);
           }
         });
       }

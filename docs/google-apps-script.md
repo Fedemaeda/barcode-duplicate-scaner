@@ -65,8 +65,7 @@ function doGet(e) {
       lock.tryLock(5000);
       try {
         ensureHeaders();
-        var data = sheet.getDataRange().getValues();
-        sheet.appendRow([data.length, code, params.nombre || '', params.descripcion || '', params.estado || '✓ Único']);
+        sheet.appendRow([params.id || '', code, params.nombre || '', params.descripcion || '', params.estado || '✓ Único']);
         SpreadsheetApp.flush();
         return json({ success: true });
       } finally {
@@ -89,7 +88,7 @@ function doGet(e) {
         for (var j = 0; j < incoming.length; j++) {
           var item = incoming[j];
           if (!item.code) continue;
-          sheet.appendRow([j + 1, item.code, item.name || '', item.descripcion || '', item.status === 'duplicate' ? '⚠️ REPETIDO' : '✓ Único']);
+          sheet.appendRow([item.id || '', item.code, item.name || '', item.descripcion || '', item.status === 'duplicate' ? '⚠️ REPETIDO' : '✓ Único']);
         }
         SpreadsheetApp.flush();
         return json({ success: true, synced: incoming.length });

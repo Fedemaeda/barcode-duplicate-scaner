@@ -318,7 +318,7 @@
 
   function sheetAdd(s) {
     if (!cfg.scriptUrl) return;
-    fetch(su({action:'addScan',code:s.code,nombre:s.name||'',descripcion:s.descripcion||'',estado:s.status==='duplicate'?WARN+' REPETIDO':CHK+' \u00danico'}),{cache:'no-store'})
+    fetch(su({action:'addScan',id:s.id||'',code:s.code,nombre:s.name||'',descripcion:s.descripcion||'',estado:s.status==='duplicate'?WARN+' REPETIDO':CHK+' \u00danico'}),{cache:'no-store'})
       .then(function(r){if(r.ok) ss(true);}).catch(function(){ss(false);});
   }
 
@@ -328,6 +328,31 @@
     fetch(su({action:'syncAll',scans:JSON.stringify(scans)}),{cache:'no-store'})
       .then(function(r){if(r.ok){showAlert('Sincronizados '+scans.length,'success');ss(true);}else{showAlert('Error HTTP '+r.status,'warning');}})
       .catch(function(){showAlert('Error de red','warning');});
+  }
+
+  function loadFromSheet() {
+    if (!cfg.scriptUrl) return;
+    fetch(su({action:'getAll'}),{cache:'no-store'})
+      .then(function(r){return r.ok?r.json():Promise.reject();})
+      .then(function(rows){
+        if (rows && rows.length) {
+          var added = 0;
+          for (var i=0;i<rows.length;i++) {
+            var r = rows[i];
+            var exists = false;
+            for (var j=0;j<scans.length;j++) {
+              if (scans[j].id && scans[j].id === r.indice) { exists = true; break; }
+            }
+            if (!exists) {
+              scans.push({id:r.indice, code:r.codigo, name:r.nombre||'', descripcion:r.descripcion||'', status:r.estado&&r.estado.indexOf('REPETIDO')>=0?'duplicate':'unique'});
+              added++;
+            }
+          }
+          if (added>0) { saveState(); renderAll(); }
+        }
+        ss(true);
+      })
+      .catch(function(){ss(false);});
   }
 
   function ss(ok) {
@@ -399,7 +424,7 @@
   }
 
   startScanner(); renderAll();
-  if (cfg.scriptUrl) { fetch(su({action:'getAll'}),{cache:'no-store'}).then(function(r){if(r.ok)ss(true);}).catch(function(){}); }
+  loadFromSheet();
   if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(function(){}); }
   </script>
 </body>

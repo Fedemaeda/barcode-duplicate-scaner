@@ -98,7 +98,6 @@
             <th>C&oacute;digo</th>
             <th>Nombre</th>
             <th>Descripci&oacute;n</th>
-            <th style="width:40px">Veces</th>
             <th style="width:70px">Estado</th>
           </tr>
         </thead>
@@ -185,20 +184,21 @@
     processing = true;
     try { navigator.vibrate(100); } catch(e) {}
     flashLine(c);
-    var local = findScan(c);
-    if (local) {
-      local.count++; local.status = 'duplicate'; saveState();
-      updateRow(local);
-      showLast(c, local.name, local.descripcion, true);
+
+    // Check if this code was already scanned before (any previous row)
+    var alreadyScanned = findScan(c);
+    if (alreadyScanned) {
+      // Duplicate: always add a new row marked as REPETIDO
+      addScan(c, alreadyScanned.name, alreadyScanned.descripcion, 'duplicate');
       showAlert(WARN + ' Repetido: ' + c, 'warning');
-      sheetAdd(local);
       processing = false; return;
     }
+
+    // New code — check sheet
     sheetFind(c).then(function(d) {
       if (d && d.found) {
-        addScan(c, d.nombre||'', d.descripcion||'');
+        addScan(c, d.nombre||'', d.descripcion||'', 'unique');
         showAlert(CHK + ' ' + (d.nombre||c), 'success');
-        sheetAdd(scans[scans.length-1]);
         processing = false;
       } else { showNameModal(c); }
     }).catch(function() { showNameModal(c); });
@@ -206,9 +206,10 @@
 
   function findScan(c) { for (var i=0;i<scans.length;i++) { if (scans[i].code===c) return scans[i]; } return null; }
 
-  function addScan(c, n, d) {
-    scans.push({code:c,name:n,descripcion:d,count:1,status:'unique'});
-    saveState(); addRow(scans[scans.length-1]); showLast(c,n,d,false);
+  function addScan(c, n, d, st) {
+    scans.push({code:c,name:n,descripcion:d,status:st||'unique'});
+    saveState(); addRow(scans[scans.length-1]); updateLast(c,n,d,st==='duplicate');
+    sheetAdd(scans[scans.length-1]);
   }
 
   function showNameModal(c) {
@@ -226,9 +227,8 @@
     var c = pendingCode;
     if (!c) { processing = false; return; }
     pendingCode = null;
-    addScan(c, n, d);
+    addScan(c, n, d, 'unique');
     showAlert(CHK + ' ' + (n||c), 'success');
-    sheetAdd(scans[scans.length-1]);
     document.getElementById('nameModal').classList.remove('active');
     processing = false;
   }
@@ -248,37 +248,24 @@
 
   function addRow(s) {
     var t = document.getElementById('tableBody');
-    var r = document.createElement('tr'); r.className = 'unique';
+    var r = document.createElement('tr');
     r.setAttribute('data-code', s.code);
-    r.innerHTML = '<td class="status-icon">' + CHK + '</td><td>' + esc(s.code) + '</td>' +
-      '<td><input type="text" class="name-input" value="' + esc(s.name||'') + '" data-code="' + escA(s.code) + '" placeholder="Nombre..." onchange="upd(this.dataset.code,\'name\',this.value)"></td>' +
-      '<td><input type="text" class="desc-input" value="' + esc(s.descripcion||'') + '" data-code="' + escA(s.code) + '" placeholder="Desc..." onchange="upd(this.dataset.code,\'descripcion\',this.value)"></td>' +
-      '<td class="count-cell">1</td><td class="status-unique">' + CHK + ' \u00danico</td>';
+    var dup = s.status === 'duplicate';
+    r.className = dup ? 'duplicate' : 'unique';
+    var icon = dup ? WARN : CHK;
+    var label = dup ? (WARN + ' REPETIDO') : (CHK + ' \u00danico');
+    r.innerHTML = '<td class="status-icon">' + icon + '</td><td>' + esc(s.code) + '</td>' +
+      '<td><input type="text" class="name-input" value="' + esc(s.name||'') + '" data-code="' + escA(s.code) + '" placeholder="Nombre..." onchange="upd(\'' + escA(s.code) + '\',\'name\',this.value)"></td>' +
+      '<td><input type="text" class="desc-input" value="' + esc(s.descripcion||'') + '" data-code="' + escA(s.code) + '" placeholder="Desc..." onchange="upd(\'' + escA(s.code) + '\',\'descripcion\',this.value)"></td>' +
+      '<td class="' + (dup ? 'status-duplicate' : 'status-unique') + '">' + label + '</td>';
     t.insertBefore(r, t.firstChild); cnt();
-  }
-
-  function updateRow(s) {
-    var t = document.getElementById('tableBody');
-    var r = t.querySelector('tr[data-code="'+escA(s.code)+'"]');
-    if (!r) { addRow(s); return; }
-    r.className = 'duplicate';
-    r.querySelector('.status-icon').textContent = WARN;
-    r.querySelector('.count-cell').textContent = s.count;
-    var sc = r.querySelector('.status-unique');
-    if (sc) { sc.textContent = WARN + ' REPETIDO'; sc.className = 'status-duplicate'; }
-    t.insertBefore(r, t.firstChild);
   }
 
   function upd(c, f, v) { var s = findScan(c); if (s) { s[f]=v; saveState(); } }
 
   function renderAll() {
     var t = document.getElementById('tableBody'); t.innerHTML = '';
-    var a = scans.slice().sort(function(a,b){
-      if (a.status==='duplicate'&&b.status!=='duplicate') return -1;
-      if (a.status!=='duplicate'&&b.status==='duplicate') return 1;
-      return 0;
-    });
-    for (var i=0;i<a.length;i++) { if (a[i].status==='duplicate') updateRow(a[i]); else addRow(a[i]); }
+    for (var i=scans.length-1;i>=0;i--) { addRow(scans[i]); }
     cnt();
   }
 
@@ -291,7 +278,7 @@
     setTimeout(function(){e.style.background='#1a1a2e';}, 300);
   }
 
-  function showLast(c, n, d, dup) {
+  function updateLast(c, n, d, dup) {
     var e = document.getElementById('lastScan');
     e.innerHTML = '\u00daltimo: ' + esc(c) + (n?' \u2014 '+esc(n):'') + '<span class="desc">' + esc(d||'') + '</span>';
     e.style.color = dup ? '#ff6b6b' : '#52b788';
@@ -368,7 +355,7 @@
     var d = scans.filter(function(s){return s.status==='duplicate';});
     if (d.length===0) { showAlert('No hay duplicados','warning'); return; }
     var wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(d.map(function(s,i){return {'#':i+1,'C\u00f3digo':s.code,'Nombre':s.name||'','Descripci\u00f3n':s.descripcion||'','Veces':s.count};})), 'Duplicados');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(d.map(function(s,i){return {'#':i+1,'C\u00f3digo':s.code,'Nombre':s.name||'','Descripci\u00f3n':s.descripcion||''};})), 'Duplicados');
     XLSX.writeFile(wb, 'duplicados_'+Date.now()+'.xlsx');
     showAlert('Exportados '+d.length+' duplicados','success');
   }
@@ -376,7 +363,7 @@
   function exportAllExcel() {
     if (scans.length===0) { showAlert('No hay datos','warning'); return; }
     var wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(scans.map(function(s,i){return {'#':i+1,'C\u00f3digo':s.code,'Nombre':s.name||'','Descripci\u00f3n':s.descripcion||'','Veces':s.count,'Estado':s.status==='duplicate'?'REPETIDO':'\u00danico'};})), 'Escaneos');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(scans.map(function(s,i){return {'#':i+1,'C\u00f3digo':s.code,'Nombre':s.name||'','Descripci\u00f3n':s.descripcion||'','Estado':s.status==='duplicate'?'REPETIDO':'\u00danico'};})), 'Escaneos');
     XLSX.writeFile(wb, 'escaneos_'+Date.now()+'.xlsx');
     showAlert('Exportados '+scans.length+' registros','success');
   }

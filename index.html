@@ -179,7 +179,10 @@
     document.getElementById('nameModal').classList.add('active');
     setTimeout(function(){document.getElementById('modalNameInput').focus();},300);
 
-    // Check sheet in real-time for duplicate warning
+    // Check locally first (instant), then verify with server
+    if (findScan(c)) {
+      document.getElementById('dupWarning').style.display = 'block';
+    }
     sheetFind(c).then(function(d) {
       if (d && d.found) {
         document.getElementById('dupWarning').style.display = 'block';
@@ -194,10 +197,9 @@
     if (!c) { processing = false; return; }
     pendingCode = null;
 
-    // Local duplicate check for immediate feedback
-    var localDup = findScan(c);
-    var isDup = !!localDup;
-    if (isDup) {
+    // Local duplicate check is PRIMARY — server check is secondary
+    var localIsDup = !!findScan(c);
+    if (localIsDup) {
       showAlert(WARN + ' Repetido detectado localmente', 'warning');
     }
 
@@ -210,7 +212,8 @@
       .then(function(r){ return r.ok ? r.json() : Promise.reject(); })
       .then(function(resp){
         if (resp && resp.error) throw new Error(resp.error);
-        var isDup = resp.status === 'duplicate';
+        var serverIsDup = resp.status === 'duplicate';
+        var isDup = localIsDup || serverIsDup;
         var idx = scans.length + 1;
         scans.push({ id: idx, code: c, name: n, descripcion: d, status: isDup ? 'duplicate' : 'unique' });
         addRow(scans[scans.length-1]);

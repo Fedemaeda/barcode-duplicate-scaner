@@ -160,7 +160,7 @@
 
   <script>
   var ST = 'barcode_scanner_state', CK = 'dupliscan_config';
-  var SU = 'https://script.google.com/macros/s/AKfycbw5kfVYbZhDK6I8y28b3675sL0_2gEIDNZYisl30R0E09ENLZ50xC2BlmzVtG1HTGDm/exec';
+  var SU = 'https://script.google.com/macros/s/AKfycbzL0d5OxJ1OBmms_CQ6hazqcNzyEPG-ZQZEA05psZQI31i3yRrIhdd99548MrW8hrfl/exec';
   var scans = JSON.parse(localStorage.getItem(ST)) || [];
   var cfg = JSON.parse(localStorage.getItem(CK));
   if (!cfg || !cfg.scriptUrl) { cfg = { scriptUrl: SU }; localStorage.setItem(CK, JSON.stringify(cfg)); }

@@ -301,7 +301,6 @@
     // ---------- SHEET ----------
 
     function sheetUrl(base, params) {
-      // Always add a random param to bust Google cache
       params._cb = Date.now() + Math.random();
       return base + '?' + new URLSearchParams(params).toString();
     }
@@ -313,11 +312,9 @@
         var res = await fetch(sheetUrl(url, { action: 'find', code: code }), { method: 'GET', cache: 'no-store' });
         if (!res.ok) return null;
         var data = await res.json();
-        if (data && data.error) { return null; }
+        if (data && data.error) return null;
         return data;
-      } catch(e) {
-        return null;
-      }
+      } catch(e) { return null; }
     }
 
     async function sendToSheet(scan) {
@@ -332,9 +329,7 @@
           estado: scan.status === 'duplicate' ? '⚠️ REPETIDO' : '✓ Único'
         }), { method: 'GET', cache: 'no-store' });
         updateSheetStatus(true);
-      } catch(e) {
-        updateSheetStatus(false);
-      }
+      } catch(e) { updateSheetStatus(false); }
     }
 
     async function syncAllToSheet() {
@@ -352,9 +347,7 @@
         } else {
           showAlert('⛔ Error sync: HTTP ' + res.status, 'warning');
         }
-      } catch(e) {
-        showAlert('⛔ Error de red al sincronizar', 'warning');
-      }
+      } catch(e) { showAlert('⛔ Error de red al sincronizar', 'warning'); }
     }
 
     function updateSheetStatus(connected) {

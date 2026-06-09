@@ -10,116 +10,105 @@
 
 1. Abrí tu Google Sheet
 2. **Extensiones > Apps Script**
-3. Borrá el código que viene por defecto y pegá este:
+3. Borrá todo y pegá este código:
 
 ```javascript
 function doGet(e) {
   try {
-    if (!e) return jsonResponse({ error: 'No event data', tip: 'Open the deployed URL in your browser, not the editor' });
+    if (!e || !e.parameter) return json({ error: 'No event data' });
 
-    const params = e.parameter || {};
-    const action = params.action || '';
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getActiveSheet();
-    const data = sheet.getDataRange().getValues();
+    var params = e.parameter;
+    var action = params.action || '';
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getActiveSheet();
+
+    // ---- READ ----
 
     if (action === 'find') {
-      const code = (params.code || '').trim();
-      for (let i = 1; i < data.length; i++) {
-        const row = data[i];
-        if (row[1] && String(row[1]).trim() === code) {
-          return jsonResponse({
-            found: true,
-            codigo: row[1],
-            nombre: row[2] || '',
-            descripcion: row[3] || '',
-            estado: row[4] || ''
-          });
+      var code = (params.code || '').trim();
+      var data = sheet.getDataRange().getValues();
+      for (var i = 1; i < data.length; i++) {
+        if (data[i][1] && String(data[i][1]).trim() === code) {
+          return json({ found: true, codigo: data[i][1], nombre: data[i][2] || '', descripcion: data[i][3] || '', estado: data[i][4] || '' });
         }
       }
-      return jsonResponse({ found: false });
+      return json({ found: false });
     }
 
     if (action === 'getAll') {
-      const rows = [];
-      for (let i = 1; i < data.length; i++) {
-        const row = data[i];
-        rows.push({
-          indice: row[0],
-          codigo: row[1],
-          nombre: row[2] || '',
-          descripcion: row[3] || '',
-          estado: row[4] || ''
-        });
+      var data = sheet.getDataRange().getValues();
+      var rows = [];
+      for (var i = 1; i < data.length; i++) {
+        rows.push({ indice: data[i][0], codigo: data[i][1], nombre: data[i][2] || '', descripcion: data[i][3] || '', estado: data[i][4] || '' });
       }
-      return jsonResponse(rows);
+      return json(rows);
     }
+
+    // ---- WRITE (lock + flush for reliability) ----
 
     if (action === 'addScan') {
-      const code = (params.code || '').trim();
-      if (!code) return jsonResponse({ error: 'Missing code' });
+      var code = (params.code || '').trim();
+      if (!code) return json({ error: 'Missing code' });
 
-      let found = false;
-      for (let i = 1; i < data.length; i++) {
-        if (data[i][1] && String(data[i][1]).trim() === code) {
-          const rowNum = i + 1;
-          sheet.getRange(rowNum, 5).setValue(params.estado || '✓ Único');
-          found = true;
-          break;
-        }
-      }
-      if (!found) {
-        sheet.appendRow([
-          data.length,
-          code,
-          params.nombre || '',
-          params.descripcion || '',
-          params.estado || '✓ Único'
-        ]);
-      }
-      SpreadsheetApp.flush();
-      return jsonResponse({ success: true });
-    }
-
-    if (action === 'syncAll') {
-      // Receive multiple scans as JSON array in `scans` parameter
-      const incoming = JSON.parse(params.scans || '[]');
-      for (let j = 0; j < incoming.length; j++) {
-        const item = incoming[j];
-        if (!item.code) continue;
-        let itemFound = false;
-        for (let i = 1; i < data.length; i++) {
-          if (data[i][1] && String(data[i][1]).trim() === item.code) {
-            const rowNum = i + 1;
-            sheet.getRange(rowNum, 5).setValue(item.status === 'duplicate' ? '⚠️ REPETIDO' : '✓ Único');
-            itemFound = true;
+      var lock = LockService.getScriptLock();
+      lock.tryLock(5000);
+      try {
+        var data = sheet.getDataRange().getValues();
+        var found = false;
+        for (var i = 1; i < data.length; i++) {
+          if (data[i][1] && String(data[i][1]).trim() === code) {
+            sheet.getRange(i + 1, 5).setValue(params.estado || '✓ Único');
+            found = true;
             break;
           }
         }
-        if (!itemFound) {
-          sheet.appendRow([
-            data.length,
-            item.code,
-            item.name || '',
-            item.descripcion || '',
-            item.status === 'duplicate' ? '⚠️ REPETIDO' : '✓ Único'
-          ]);
+        if (!found) {
+          sheet.appendRow([data.length, code, params.nombre || '', params.descripcion || '', params.estado || '✓ Único']);
         }
+        SpreadsheetApp.flush();
+        return json({ success: true, updated: found, isNew: !found });
+      } finally {
+        lock.releaseLock();
       }
-      SpreadsheetApp.flush();
-      return jsonResponse({ success: true, synced: incoming.length });
     }
 
-    return jsonResponse({ error: 'Unknown action: ' + action });
+    if (action === 'syncAll') {
+      var incoming = JSON.parse(params.scans || '[]');
+      var lock = LockService.getScriptLock();
+      lock.tryLock(5000);
+      try {
+        var data = sheet.getDataRange().getValues();
+        for (var j = 0; j < incoming.length; j++) {
+          var item = incoming[j];
+          if (!item.code) continue;
+          var itemFound = false;
+          for (var i = 1; i < data.length; i++) {
+            if (data[i][1] && String(data[i][1]).trim() === item.code) {
+              var estado = item.status === 'duplicate' ? '⚠️ REPETIDO' : '✓ Único';
+              sheet.getRange(i + 1, 5).setValue(estado);
+              itemFound = true;
+              break;
+            }
+          }
+          if (!itemFound) {
+            sheet.appendRow([data.length, item.code, item.name || '', item.descripcion || '', item.status === 'duplicate' ? '⚠️ REPETIDO' : '✓ Único']);
+          }
+        }
+        SpreadsheetApp.flush();
+        return json({ success: true, synced: incoming.length });
+      } finally {
+        lock.releaseLock();
+      }
+    }
+
+    return json({ error: 'Unknown action: ' + action });
   } catch (err) {
-    return jsonResponse({ error: err.toString() });
+    return json({ error: err.toString() });
   }
 }
 
-function jsonResponse(obj) {
-  return ContentService
-    .createTextOutput(JSON.stringify(obj))
-    .setMimeType(ContentService.MimeType.JSON);
+function json(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }
 ```
 
@@ -128,11 +117,4 @@ function jsonResponse(obj) {
    - Ejecutar como: **Yo**
    - Quién tiene acceso: **Cualquier usuario**
 
-5. **Importante — Primera autorización:**
-   - Copiá la URL que te da (termina en `/exec`)
-   - Abrila DIRECTAMENTE en el navegador
-   - Si aparece una pantalla de autorización, aceptá
-   - Después agregá `?action=getAll` al final y presioná Enter
-   - Si ves un JSON con datos o un array vacío, el script funciona
-
-6. Recién después pegá la URL en la app (⚙️ > Probar conexión)
+5. Copiá la URL que te da.

@@ -17,9 +17,7 @@
     .header-left { display: flex; align-items: center; gap: 10px; }
     .header-left h1 { font-size: 18px; }
     #scanCount { font-size: 14px; color: #888; }
-    .config-btn { background: none; border: 1px solid #333; color: #aaa; width: 36px; height: 36px; border-radius: 8px; font-size: 18px; cursor: pointer; }
-    .config-btn:hover { border-color: #2563eb; color: #fff; }
-    .sheet-status { font-size: 11px; color: #555; }
+    .sheet-status { font-size: 11px; }
     .sheet-status.connected { color: #52b788; }
     .sheet-status.disconnected { color: #ff6b6b; }
     #scanner-container { width: 100%; max-width: 500px; margin: 0 auto; background: #000; min-height: 220px; }
@@ -43,7 +41,6 @@
     .status-icon { font-size: 16px; text-align: center; width: 28px; }
     .status-duplicate { color: #ff4444; font-weight: bold; font-size: 12px; }
     .status-unique { color: #4ade80; font-size: 12px; }
-    .count-cell { text-align: center; }
     #actions { padding: 16px; text-align: center; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
     #clearBtn { background: #3a1a1a; color: #ff6b6b; border: 1px solid #5a2a2a; padding: 10px 20px; border-radius: 8px; font-size: 14px; cursor: pointer; }
     .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 100; justify-content: center; align-items: center; }
@@ -60,10 +57,6 @@
     .btn-secondary { background: #333; color: #aaa; }
     .modal-section { border-top: 1px solid #2a2a3e; padding-top: 16px; margin-top: 16px; }
     .modal-section h4 { font-size: 14px; margin-bottom: 10px; color: #ccc; }
-    .file-upload { margin-bottom: 12px; }
-    .file-upload input[type="file"] { display: none; }
-    .file-upload label { display: inline-block; background: #2a2a3e; color: #aaa; padding: 8px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; }
-    .file-upload label:hover { background: #3a3a4e; }
     .status-text { font-size: 12px; color: #666; margin-top: 4px; }
     @media (max-width: 480px) { .header-left h1 { font-size: 15px; } th { font-size: 11px; padding: 6px 4px; } td { font-size: 11px; padding: 4px; } .name-input, .desc-input { font-size: 11px; min-width: 60px; } }
   </style>
@@ -75,18 +68,14 @@
         <h1>&#x1F4F7; DupliScan</h1>
         <span id="scanCount">0</span>
       </div>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span class="sheet-status disconnected" id="sheetStatus">&#x26A0;&#xFE0F; Sheet</span>
-        <button class="config-btn" onclick="openConfig()">&#x2699;&#xFE0F;</button>
-      </div>
+      <span class="sheet-status disconnected" id="sheetStatus">&#x26A0;&#xFE0F; Sheet</span>
     </header>
     <div id="scanner-container"></div>
-    <div id="lastScan">Esperando c&oacute;digo...<span class="desc" id="lastScanDesc"></span></div>
+    <div id="lastScan">Esperando c&oacute;digo...<span class="desc"></span></div>
     <div id="alert"></div>
     <div id="results-header">
       <h2>Resultados</h2>
       <div class="header-buttons">
-        <button onclick="syncAllToSheet()">&#x1F504; Sync</button>
         <button onclick="exportDupExcel()">&#x1F4E5; Duplicados</button>
         <button onclick="exportAllExcel()">&#x1F4E5; Todo</button>
       </div>
@@ -107,7 +96,7 @@
       </table>
     </div>
     <div id="actions">
-      <button id="clearBtn" onclick="clearAll()">&#x1F5D1;&#xFE0F; Limpiar todo</button>
+      <button id="clearBtn" onclick="clearAll()">&#x1F5D1;&#xFE0F; Limpiar pantalla</button>
     </div>
   </div>
 
@@ -116,6 +105,7 @@
       <h3>&#x1F4E6; Nuevo c&oacute;digo</h3>
       <div class="code-display" id="modalCode"></div>
       <div id="dupWarning" style="display:none;color:#ff6b6b;font-size:13px;margin-bottom:10px;">&#x26A0;&#xFE0F; Este c&oacute;digo ya fue escaneado</div>
+      <div id="savingIndicator" style="display:none;color:#52b788;font-size:13px;margin-bottom:10px;">&#x1F504; Guardando en el Sheet...</div>
       <label>Nombre del producto</label>
       <input type="text" id="modalNameInput" placeholder="..." autocomplete="off">
       <label>Descripci&oacute;n</label>
@@ -137,21 +127,9 @@
         <button class="btn-secondary" onclick="saveConfig()">&#x1F4BE; Guardar</button>
       </div>
       <div id="connectionStatus" class="status-text"></div>
-      <div class="modal-section">
-        <h4>&#x1F4CA; Google Sheet</h4>
-        <button class="btn-primary" onclick="syncAllToSheet()" style="width:100%;margin-bottom:4px;">&#x1F504; Sincronizar todo</button>
+      <div style="margin-top:16px;">
+        <button class="btn-primary" onclick="refreshFromSheet()" style="width:100%;margin-bottom:4px;">&#x1F504; Recargar datos del Sheet</button>
         <button class="btn-primary" onclick="window.location.href='https://docs.google.com/spreadsheets/d/1Y18brymhRJ3KdE2-tHF8bjJxobzlvHjKDtGEdsvhMlE/edit'" style="width:100%;margin-bottom:4px;">&#x1F4C4; Abrir Google Sheet</button>
-      </div>
-      <div class="modal-section">
-        <h4>&#x1F4BE; Backup</h4>
-        <div style="display:flex;gap:8px;margin-bottom:12px;">
-          <button class="btn-primary" onclick="downloadBackup()">&#x1F4E5; Descargar</button>
-        </div>
-        <div class="file-upload">
-          <label for="restoreFile">&#x1F4C2; Restaurar (JSON)</label>
-          <input type="file" id="restoreFile" accept=".json" onchange="restoreBackup(event)">
-        </div>
-        <div id="backupStatus" class="status-text"></div>
       </div>
       <div class="modal-buttons" style="margin-top:16px;">
         <button class="btn-secondary" onclick="closeConfig()">Cerrar</button>
@@ -160,15 +138,16 @@
   </div>
 
   <script>
-  var ST = 'barcode_scanner_state', CK = 'dupliscan_config';
+  var CK = 'dupliscan_config';
   var SU = 'https://script.google.com/macros/s/AKfycbxK7UBVe66exfWy_twnqnIJjkpj0tGqKfTQtaNaQFZUquton7bsKk8ZZ1AZT-tYWe26/exec';
-  var scans = JSON.parse(localStorage.getItem(ST)) || [];
   var cfg = JSON.parse(localStorage.getItem(CK));
   if (!cfg || !cfg.scriptUrl) { cfg = { scriptUrl: SU }; localStorage.setItem(CK, JSON.stringify(cfg)); }
-  var processing = false, pendingCode = null, pendingIsDup = false, qr = null;
 
-  var CI = '\uD83D\uDCF7', CHK = '\u2705', WARN = '\u26A0\uFE0F', BOX = '\uD83D\uDCE6';
+  var scans = [];          // In-memory only. Sheet is source of truth.
+  var processing = false, pendingCode = null, qr = null;
+  var CI = '\uD83D\uDCF7', CHK = '\u2705', WARN = '\u26A0\uFE0F';
 
+  // ── SCANNER ──────────────────────────────────────────────
   function startScanner() {
     try {
       qr = new Html5Qrcode("scanner-container");
@@ -180,6 +159,7 @@
     }
   }
 
+  // ── SCAN PIPELINE ─────────────────────────────────────────
   function onScan(t) {
     if (processing) return;
     var c = (t||'').trim();
@@ -188,37 +168,13 @@
     try { navigator.vibrate(100); } catch(e) {}
     flashLine(c);
 
-    if (findScan(c)) {
-      // Already scanned before → show warning, always manual entry
-      showNameModal(c, true);
-    } else {
-      // New code → check sheet, then show modal
-      sheetFind(c).then(function(d) {
-        // Pre-fill modal with sheet data if found (user still clicks Guardar)
-        var prefill = (d && d.found) ? { name: d.nombre||'', desc: d.descripcion||'' } : { name: '', desc: '' };
-        showNameModal(c, false, prefill);
-      }).catch(function() {
-        showNameModal(c, false, { name: '', desc: '' });
-      });
-    }
-  }
-
-  function getMaxId() {
-    var m = 0;
-    for (var i = 0; i < scans.length; i++) { if (scans[i].id > m) m = scans[i].id; }
-    return m;
-  }
-
-  function findScan(c) { for (var i=0;i<scans.length;i++) { if (scans[i].code===c) return scans[i]; } return null; }
-
-  function showNameModal(c, isDup, prefill) {
+    // Always show modal. Server decides if duplicate.
     pendingCode = c;
-    pendingIsDup = isDup;
-    prefill = prefill || { name: '', desc: '' };
-    document.getElementById('modalCode').textContent = BOX + ' ' + c;
-    document.getElementById('modalNameInput').value = prefill.name;
-    document.getElementById('modalDescInput').value = prefill.desc;
-    document.getElementById('dupWarning').style.display = isDup ? 'block' : 'none';
+    document.getElementById('modalCode').textContent = '\uD83D\uDCE6 ' + c;
+    document.getElementById('modalNameInput').value = '';
+    document.getElementById('modalDescInput').value = '';
+    document.getElementById('dupWarning').style.display = 'none';
+    document.getElementById('savingIndicator').style.display = 'none';
     document.getElementById('nameModal').classList.add('active');
     setTimeout(function(){document.getElementById('modalNameInput').focus();},300);
   }
@@ -230,19 +186,39 @@
     if (!c) { processing = false; return; }
     pendingCode = null;
 
-    scans.push({ id: getMaxId() + 1, code: c, name: n, descripcion: d, status: pendingIsDup ? 'duplicate' : 'unique' });
-    saveState();
-    addRow(scans[scans.length-1]);
-    updateLast(c, n, d, pendingIsDup);
-    document.getElementById('nameModal').classList.remove('active');
-    processing = false;
+    // Show saving indicator, hide buttons
+    document.getElementById('savingIndicator').style.display = 'block';
+    document.querySelectorAll('#nameModal .modal-buttons button').forEach(function(b){b.disabled=true;});
 
-    sheetAdd(scans[scans.length-1]);
+    // Write to sheet — server checks duplicates atomically
+    fetch(sheetUrl({ action: 'addScan', code: c, nombre: n, descripcion: d }), { cache: 'no-store' })
+      .then(function(r){ return r.ok ? r.json() : Promise.reject(); })
+      .then(function(resp){
+        if (resp && resp.error) throw new Error(resp.error);
+        var isDup = resp.status === 'duplicate';
+        var idx = scans.length + 1;
+        scans.push({ id: idx, code: c, name: n, descripcion: d, status: isDup ? 'duplicate' : 'unique' });
+        addRow(scans[scans.length-1]);
+        updateLast(c, n, d, isDup);
+        ss(true);
+      })
+      .catch(function(err){
+        showAlert('Error al guardar en el Sheet: ' + (err.message||err), 'warning');
+        ss(false);
+      })
+      .finally(function(){
+        document.getElementById('savingIndicator').style.display = 'none';
+        document.querySelectorAll('#nameModal .modal-buttons button').forEach(function(b){b.disabled=false;});
+        document.getElementById('nameModal').classList.remove('active');
+        processing = false;
+      });
   }
 
   function skipName() {
     document.getElementById('modalNameInput').value = '';
     document.getElementById('modalDescInput').value = '';
+    if (!pendingCode) { processing = false; return; }
+    // Skip still writes to sheet with empty name
     saveName();
   }
 
@@ -253,6 +229,7 @@
     if (e.key==='Enter') saveName();
   });
 
+  // ── TABLE ──────────────────────────────────────────────────
   function addRow(s) {
     var t = document.getElementById('tableBody');
     var r = document.createElement('tr');
@@ -262,22 +239,22 @@
     var icon = dup ? WARN : CHK;
     var label = dup ? (WARN + ' REPETIDO') : (CHK + ' \u00danico');
     r.innerHTML = '<td>' + (s.id||'') + '</td><td class="status-icon">' + icon + '</td><td>' + esc(s.code) + '</td>' +
-      '<td><input type="text" class="name-input" value="' + esc(s.name||'') + '" data-code="' + escA(s.code) + '" placeholder="Nombre..." onchange="upd(this.dataset.code,\'name\',this.value)"></td>' +
-      '<td><input type="text" class="desc-input" value="' + esc(s.descripcion||'') + '" data-code="' + escA(s.code) + '" placeholder="Desc..." onchange="upd(this.dataset.code,\'descripcion\',this.value)"></td>' +
+      '<td>' + esc(s.name||'') + '</td>' +
+      '<td>' + esc(s.descripcion||'') + '</td>' +
       '<td class="' + (dup ? 'status-duplicate' : 'status-unique') + '">' + label + '</td>';
-    t.insertBefore(r, t.firstChild); cnt();
+    t.insertBefore(r, t.firstChild);
+    cnt();
   }
-
-  function upd(c, f, v) { var s = findScan(c); if (s) { s[f]=v; saveState(); } }
 
   function renderAll() {
     var t = document.getElementById('tableBody'); t.innerHTML = '';
-    for (var i=scans.length-1;i>=0;i--) { addRow(scans[i]); }
+    for (var i = scans.length - 1; i >= 0; i--) { addRow(scans[i]); }
     cnt();
   }
 
   function cnt() { document.getElementById('scanCount').textContent = scans.length; }
 
+  // ── UI HELPERS ────────────────────────────────────────────
   function flashLine(c) {
     var e = document.getElementById('lastScan');
     e.innerHTML = CI + ' ' + esc(c) + '<span class="desc"></span>';
@@ -294,101 +271,64 @@
   function showAlert(m, t) {
     var e = document.getElementById('alert');
     e.textContent = m; e.className = t;
-    clearTimeout(e._to); e._to = setTimeout(function(){e.style.display='none';},2500);
+    clearTimeout(e._to); e._to = setTimeout(function(){e.style.display='none';},3000);
   }
 
   function esc(t) { var d=document.createElement('div'); d.textContent=t; return d.innerHTML; }
-  function escA(t) { return String(t).replace(/"/g,'&quot;'); }
-  function saveState() { localStorage.setItem(ST, JSON.stringify(scans)); }
 
   function clearAll() {
-    if (!confirm('\u00bfLimpiar todos los escaneos?')) return;
-    scans = []; saveState(); renderAll();
+    if (!confirm('\u00bfLimpiar la pantalla? (no borra el Sheet)')) return;
+    scans = []; renderAll();
     document.getElementById('lastScan').innerHTML = 'Esperando c\u00f3digo...<span class="desc"></span>';
   }
 
-  function su(p) { p._cb = Date.now(); return cfg.scriptUrl + '?' + new URLSearchParams(p).toString(); }
-
-  function sheetFind(c) {
-    if (!cfg.scriptUrl) return Promise.reject();
-    return fetch(su({action:'find',code:c}),{cache:'no-store'})
-      .then(function(r){return r.ok?r.json():Promise.reject();})
-      .then(function(d){return d.error?null:d;}).catch(function(){return null;});
+  // ── SHEET ──────────────────────────────────────────────────
+  function sheetUrl(params) {
+    params._cb = Date.now();
+    return cfg.scriptUrl + '?' + new URLSearchParams(params).toString();
   }
 
-  function sheetAdd(s) {
-    if (!cfg.scriptUrl) return;
-    fetch(su({action:'addScan',id:s.id||'',code:s.code,nombre:s.name||'',descripcion:s.descripcion||'',estado:s.status==='duplicate'?WARN+' REPETIDO':CHK+' \u00danico'}),{cache:'no-store'})
-      .then(function(r){if(r.ok) ss(true);}).catch(function(){ss(false);});
-  }
-
-  function syncAllToSheet() {
+  function refreshFromSheet() {
     if (!cfg.scriptUrl) { showAlert('No hay URL', 'warning'); return; }
-    if (scans.length===0) { showAlert('No hay datos', 'warning'); return; }
-    fetch(su({action:'syncAll',scans:JSON.stringify(scans)}),{cache:'no-store'})
-      .then(function(r){if(r.ok){showAlert('Sincronizados '+scans.length,'success');ss(true);}else{showAlert('Error HTTP '+r.status,'warning');}})
-      .catch(function(){showAlert('Error de red','warning');});
-  }
-
-  function loadFromSheet() {
-    if (!cfg.scriptUrl) return;
-    fetch(su({action:'getAll'}),{cache:'no-store'})
-      .then(function(r){return r.ok?r.json():Promise.reject();})
+    showAlert('Cargando datos del Sheet...', 'success');
+    fetch(sheetUrl({ action: 'getAll' }), { cache: 'no-store' })
+      .then(function(r){ return r.ok ? r.json() : Promise.reject(r.status); })
       .then(function(rows){
+        scans = [];
         if (rows && rows.length) {
-          var added = 0;
-          for (var i=0;i<rows.length;i++) {
-            var r = rows[i];
-            var exists = false;
-            for (var j=0;j<scans.length;j++) {
-              if (scans[j].id && scans[j].id === r.indice) { exists = true; break; }
-            }
-            if (!exists) {
-              scans.push({id:r.indice, code:String(r.codigo), name:r.nombre||'', descripcion:r.descripcion||'', status:r.estado&&r.estado.indexOf('REPETIDO')>=0?'duplicate':'unique'});
-              added++;
-            }
+          for (var i = 0; i < rows.length; i++) {
+            scans.push({
+              id: rows[i].indice || (i + 1),
+              code: String(rows[i].codigo || ''),
+              name: rows[i].nombre || '',
+              descripcion: rows[i].descripcion || '',
+              status: (rows[i].estado && rows[i].estado.indexOf('REPETIDO') >= 0) ? 'duplicate' : 'unique'
+            });
           }
-          if (added>0) { saveState(); renderAll(); }
         }
+        renderAll();
         ss(true);
+        showAlert('Cargados ' + scans.length + ' registros del Sheet', 'success');
       })
-      .catch(function(){ss(false);});
+      .catch(function(e){
+        ss(false);
+        showAlert('Error al cargar del Sheet: ' + e, 'warning');
+      });
   }
 
   function ss(ok) {
-    document.getElementById('sheetStatus').textContent = ok ? (CHK + ' Sheet') : (WARN + ' Sheet');
-    document.getElementById('sheetStatus').className = 'sheet-status ' + (ok?'connected':'disconnected');
+    var el = document.getElementById('sheetStatus');
+    el.textContent = ok ? (CHK + ' Sheet') : (WARN + ' Sheet');
+    el.className = 'sheet-status ' + (ok ? 'connected' : 'disconnected');
   }
 
-  function openConfig() {
-    document.getElementById('scriptUrlInput').value = cfg.scriptUrl||'';
-    document.getElementById('connectionStatus').textContent = '';
-    document.getElementById('backupStatus').textContent = '';
-    document.getElementById('configModal').classList.add('active');
-  }
-  function closeConfig() { document.getElementById('configModal').classList.remove('active'); }
-  function saveConfig() { cfg.scriptUrl=document.getElementById('scriptUrlInput').value.trim(); localStorage.setItem(CK,JSON.stringify(cfg)); showAlert('Guardado','success'); }
-
-  function testConnection() {
-    var u = document.getElementById('scriptUrlInput').value.trim();
-    if (!u) { document.getElementById('connectionStatus').textContent = 'Ingrese una URL'; return; }
-    cfg.scriptUrl = u; localStorage.setItem(CK, JSON.stringify(cfg));
-    document.getElementById('connectionStatus').textContent = 'Probando...';
-    fetch(su({action:'getAll'}),{cache:'no-store'})
-      .then(function(r){return r.ok?r.json():Promise.reject(r.status);})
-      .then(function(d){
-        if (d&&d.error) { document.getElementById('connectionStatus').textContent = 'Error: '+d.error; return; }
-        ss(true);
-        document.getElementById('connectionStatus').textContent = 'Conectado! ' + (Array.isArray(d)?d.length+' registros':'');
-      }).catch(function(e){document.getElementById('connectionStatus').textContent = 'Error: '+e;});
-  }
-
+  // ── EXCEL ──────────────────────────────────────────────────
   function shareOrDownload(wb, name, msg) {
     var wbout = XLSX.write(wb, {type:'array', bookType:'xlsx'});
     var blob = new Blob([wbout], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
     var file = new File([blob], name, {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
     if (navigator.share && navigator.canShare && navigator.canShare({files:[file]})) {
-      navigator.share({files:[file], title: name}).catch(function(){});
+      navigator.share({files:[file], title:name}).catch(function(){});
     } else {
       var a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
@@ -413,31 +353,31 @@
     shareOrDownload(wb, 'escaneos.xlsx', 'Exportados '+scans.length+' registros');
   }
 
-  function downloadBackup() {
-    if (scans.length===0) { showAlert('No hay datos','warning'); return; }
-    var b = new Blob([JSON.stringify(scans,null,2)],{type:'application/json'});
-    var a = document.createElement('a'); a.href = URL.createObjectURL(b);
-    a.download = 'backup_'+Date.now()+'.json'; a.click();
-    document.getElementById('backupStatus').textContent = 'Backup descargado ('+scans.length+' registros)';
+  // ── CONFIG ─────────────────────────────────────────────────
+  function openConfig() {
+    document.getElementById('scriptUrlInput').value = cfg.scriptUrl||'';
+    document.getElementById('connectionStatus').textContent = '';
+    document.getElementById('configModal').classList.add('active');
+  }
+  function closeConfig() { document.getElementById('configModal').classList.remove('active'); }
+  function saveConfig() { cfg.scriptUrl=document.getElementById('scriptUrlInput').value.trim(); localStorage.setItem(CK,JSON.stringify(cfg)); showAlert('Guardado','success'); }
+  function testConnection() {
+    var u = document.getElementById('scriptUrlInput').value.trim();
+    if (!u) { document.getElementById('connectionStatus').textContent = 'Ingrese una URL'; return; }
+    cfg.scriptUrl = u; localStorage.setItem(CK, JSON.stringify(cfg));
+    document.getElementById('connectionStatus').textContent = 'Probando...';
+    fetch(sheetUrl({action:'getAll'}),{cache:'no-store'})
+      .then(function(r){return r.ok?r.json():Promise.reject(r.status);})
+      .then(function(d){
+        if (d&&d.error) { document.getElementById('connectionStatus').textContent = 'Error: '+d.error; return; }
+        ss(true);
+        document.getElementById('connectionStatus').textContent = 'Conectado! ' + (Array.isArray(d)?d.length+' registros':'');
+      }).catch(function(e){document.getElementById('connectionStatus').textContent = 'Error: '+e;});
   }
 
-  function restoreBackup(ev) {
-    var f = ev.target.files[0]; if (!f) return;
-    var r = new FileReader();
-    r.onload = function(e) {
-      try {
-        var d = JSON.parse(e.target.result);
-        if (!Array.isArray(d)) throw new Error('Formato inv\u00e1lido');
-        scans = d; saveState(); renderAll();
-        document.getElementById('backupStatus').textContent = 'Restaurados '+scans.length+' registros';
-        showAlert('Backup cargado','success');
-      } catch(err) { document.getElementById('backupStatus').textContent = 'Error: '+err.message; }
-    };
-    r.readAsText(f); ev.target.value = '';
-  }
-
-  startScanner(); renderAll();
-  loadFromSheet();
+  // ── INIT ───────────────────────────────────────────────────
+  startScanner();
+  refreshFromSheet();
   if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(function(){}); }
   </script>
 </body>

@@ -55,7 +55,7 @@ function doGet(e) {
       return json(rows);
     }
 
-    // ---- WRITE (always append, never update existing rows) ----
+    // ---- WRITE (lock, check duplicates server-side) ----
 
     if (action === 'addScan') {
       var code = (params.code || '').trim();
@@ -65,33 +65,19 @@ function doGet(e) {
       lock.tryLock(5000);
       try {
         ensureHeaders();
-        sheet.appendRow([params.id || '', code, params.nombre || '', params.descripcion || '', params.estado || '✓ Único']);
-        SpreadsheetApp.flush();
-        return json({ success: true });
-      } finally {
-        lock.releaseLock();
-      }
-    }
-
-    if (action === 'syncAll') {
-      var incoming = JSON.parse(params.scans || '[]');
-      var lock = LockService.getScriptLock();
-      lock.tryLock(5000);
-      try {
-        ensureHeaders();
-        // Remove all old data rows (keep header at row 1)
-        var lastRow = sheet.getLastRow();
-        if (lastRow > 1) {
-          sheet.deleteRows(2, lastRow - 1);
+        var data = sheet.getDataRange().getValues();
+        // Check if code already exists in sheet (server-side duplicate detection)
+        var isDuplicate = false;
+        for (var i = 1; i < data.length; i++) {
+          if (data[i][1] && String(data[i][1]).trim() === code) {
+            isDuplicate = true;
+            break;
+          }
         }
-        // Insert all incoming scans fresh
-        for (var j = 0; j < incoming.length; j++) {
-          var item = incoming[j];
-          if (!item.code) continue;
-          sheet.appendRow([item.id || '', item.code, item.name || '', item.descripcion || '', item.status === 'duplicate' ? '⚠️ REPETIDO' : '✓ Único']);
-        }
+        var status = isDuplicate ? '⚠️ REPETIDO' : '✓ Único';
+        sheet.appendRow([data.length, code, params.nombre || '', params.descripcion || '', status]);
         SpreadsheetApp.flush();
-        return json({ success: true, synced: incoming.length });
+        return json({ success: true, status: isDuplicate ? 'duplicate' : 'unique' });
       } finally {
         lock.releaseLock();
       }

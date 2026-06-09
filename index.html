@@ -230,7 +230,6 @@
   function skipName() {
     document.getElementById('modalNameInput').value = '';
     document.getElementById('modalDescInput').value = '';
-    if (!pendingCode) { processing = false; return; }
     // Skip still writes to sheet with empty name
     saveName();
   }

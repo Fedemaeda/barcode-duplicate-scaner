@@ -147,6 +147,7 @@
   var processing = false, pendingCode = null, qr = null;
 
   function findScan(c) { for (var i = 0; i < scans.length; i++) { if (scans[i].code === c) return scans[i]; } return null; }
+  function codeInTable(c) { var t = document.getElementById('tableBody'); for (var i = 0; i < t.children.length; i++) { if (t.children[i].getAttribute('data-code') === c) return true; } return false; }
   var CI = '\uD83D\uDCF7', CHK = '\u2705', WARN = '\u26A0\uFE0F';
 
   // ── SCANNER ──────────────────────────────────────────────
@@ -179,8 +180,8 @@
     document.getElementById('nameModal').classList.add('active');
     setTimeout(function(){document.getElementById('modalNameInput').focus();},300);
 
-    // Check locally first (instant), then verify with server
-    if (findScan(c)) {
+    // Instant checks in-memory + DOM (covers timing edge cases)
+    if (findScan(c) || codeInTable(c)) {
       document.getElementById('dupWarning').style.display = 'block';
     }
     sheetFind(c).then(function(d) {
@@ -197,8 +198,8 @@
     if (!c) { processing = false; return; }
     pendingCode = null;
 
-    // Local duplicate check is PRIMARY — server check is secondary
-    var localIsDup = !!findScan(c);
+    // Dual check: in-memory scans + rendered DOM (covers timing edge cases)
+    var localIsDup = !!findScan(c) || codeInTable(c);
     if (localIsDup) {
       showAlert(WARN + ' Repetido detectado localmente', 'warning');
     }

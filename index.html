@@ -139,9 +139,10 @@
 
   <script>
   var CK = 'dupliscan_config';
-  var SU = 'https://script.google.com/macros/s/AKfycbwY77awWK85PrYjayoIzNBIoUhaIMzMhrP2mJOc1fQEyib6rbvP5GbJFmjjjgrWgHUC/exec';
+  var OLD_SU = 'https://script.google.com/macros/s/AKfycbwY77awWK85PrYjayoIzNBIoUhaIMzMhrP2mJOc1fQEyib6rbvP5GbJFmjjjgrWgHUC/exec';
+  var SU = 'https://script.google.com/macros/s/AKfycbwl3pE-Vs7Rs0tvPnLAdc7_X1mhSLHx3oZNRs5kLStSVK4uqcCs6mnwd0WOLTSAlRTd/exec';
   var cfg = JSON.parse(localStorage.getItem(CK));
-  if (!cfg || !cfg.scriptUrl) { cfg = { scriptUrl: SU }; localStorage.setItem(CK, JSON.stringify(cfg)); }
+  if (!cfg || !cfg.scriptUrl || cfg.scriptUrl === OLD_SU) { cfg = { scriptUrl: SU }; localStorage.setItem(CK, JSON.stringify(cfg)); }
 
   var scans = [];          // In-memory only. Sheet is source of truth.
   var processing = false, pendingCode = null, qr = null;

@@ -35,7 +35,7 @@
     .header-buttons button { background: #2563eb; color: #fff; border: none; padding: 7px 14px; border-radius: 8px; font-size: 13px; cursor: pointer; white-space: nowrap; }
     #table-wrapper { overflow-x: auto; padding: 0 6px; }
     table { width: 100%; border-collapse: collapse; }
-    th { background: #1a1a2e; padding: 8px 6px; text-align: left; font-size: 12px; color: #666; position: sticky; top: 52px; white-space: nowrap; }
+    th { background: #1a1a2e; padding: 8px 6px; text-align: left; font-size: 12px; color: #666; position: sticky; top: 0; z-index: 1; white-space: nowrap; }
     td { padding: 6px; border-bottom: 1px solid #1a1a2e; font-size: 13px; vertical-align: middle; }
     .name-input, .desc-input { background: transparent; border: 1px solid #2a2a3e; border-radius: 4px; color: #e0e0e0; padding: 3px 5px; font-size: 12px; width: 100%; min-width: 80px; outline: none; }
     .name-input:focus, .desc-input:focus { border-color: #2563eb; }
@@ -94,6 +94,7 @@
       <table id="resultsTable">
         <thead>
           <tr>
+            <th style="width:36px">#</th>
             <th style="width:28px"></th>
             <th>C&oacute;digo</th>
             <th>Nombre</th>
@@ -113,6 +114,7 @@
     <div class="modal-content">
       <h3>&#x1F4E6; Nuevo c&oacute;digo</h3>
       <div class="code-display" id="modalCode"></div>
+      <div id="dupWarning" style="display:none;color:#ff6b6b;font-size:13px;margin-bottom:10px;">&#x26A0;&#xFE0F; Este c&oacute;digo ya fue escaneado</div>
       <label>Nombre del producto</label>
       <input type="text" id="modalNameInput" placeholder="..." autocomplete="off">
       <label>Descripci&oacute;n</label>
@@ -162,7 +164,7 @@
   var scans = JSON.parse(localStorage.getItem(ST)) || [];
   var cfg = JSON.parse(localStorage.getItem(CK));
   if (!cfg || !cfg.scriptUrl) { cfg = { scriptUrl: SU }; localStorage.setItem(CK, JSON.stringify(cfg)); }
-  var processing = false, pendingCode = null, qr = null;
+  var processing = false, pendingCode = null, pendingIsDup = false, qr = null;
 
   var CI = '\uD83D\uDCF7', CHK = '\u2705', WARN = '\u26A0\uFE0F', BOX = '\uD83D\uDCE6';
 
@@ -185,38 +187,37 @@
     try { navigator.vibrate(100); } catch(e) {}
     flashLine(c);
 
-    // Check if this code was already scanned before (any previous row)
-    var alreadyScanned = findScan(c);
-    if (alreadyScanned) {
-      // Duplicate: always add a new row marked as REPETIDO
-      addScan(c, alreadyScanned.name, alreadyScanned.descripcion, 'duplicate');
-      showAlert(WARN + ' Repetido: ' + c, 'warning');
-      processing = false; return;
+    if (findScan(c)) {
+      // Already scanned before → show warning, always manual entry
+      showNameModal(c, true);
+    } else {
+      // New code → check sheet, then show modal
+      sheetFind(c).then(function(d) {
+        // Pre-fill modal with sheet data if found (user still clicks Guardar)
+        var prefill = (d && d.found) ? { name: d.nombre||'', desc: d.descripcion||'' } : { name: '', desc: '' };
+        showNameModal(c, false, prefill);
+      }).catch(function() {
+        showNameModal(c, false, { name: '', desc: '' });
+      });
     }
+  }
 
-    // New code — check sheet
-    sheetFind(c).then(function(d) {
-      if (d && d.found) {
-        addScan(c, d.nombre||'', d.descripcion||'', 'unique');
-        showAlert(CHK + ' ' + (d.nombre||c), 'success');
-        processing = false;
-      } else { showNameModal(c); }
-    }).catch(function() { showNameModal(c); });
+  function getMaxId() {
+    var m = 0;
+    for (var i = 0; i < scans.length; i++) { if (scans[i].id > m) m = scans[i].id; }
+    return m;
   }
 
   function findScan(c) { for (var i=0;i<scans.length;i++) { if (scans[i].code===c) return scans[i]; } return null; }
 
-  function addScan(c, n, d, st) {
-    scans.push({code:c,name:n,descripcion:d,status:st||'unique'});
-    saveState(); addRow(scans[scans.length-1]); updateLast(c,n,d,st==='duplicate');
-    sheetAdd(scans[scans.length-1]);
-  }
-
-  function showNameModal(c) {
+  function showNameModal(c, isDup, prefill) {
     pendingCode = c;
+    pendingIsDup = isDup;
+    prefill = prefill || { name: '', desc: '' };
     document.getElementById('modalCode').textContent = BOX + ' ' + c;
-    document.getElementById('modalNameInput').value = '';
-    document.getElementById('modalDescInput').value = '';
+    document.getElementById('modalNameInput').value = prefill.name;
+    document.getElementById('modalDescInput').value = prefill.desc;
+    document.getElementById('dupWarning').style.display = isDup ? 'block' : 'none';
     document.getElementById('nameModal').classList.add('active');
     setTimeout(function(){document.getElementById('modalNameInput').focus();},300);
   }
@@ -227,10 +228,15 @@
     var c = pendingCode;
     if (!c) { processing = false; return; }
     pendingCode = null;
-    addScan(c, n, d, 'unique');
-    showAlert(CHK + ' ' + (n||c), 'success');
+
+    scans.push({ id: getMaxId() + 1, code: c, name: n, descripcion: d, status: pendingIsDup ? 'duplicate' : 'unique' });
+    saveState();
+    addRow(scans[scans.length-1]);
+    updateLast(c, n, d, pendingIsDup);
     document.getElementById('nameModal').classList.remove('active');
     processing = false;
+
+    sheetAdd(scans[scans.length-1]);
   }
 
   function skipName() {
@@ -254,9 +260,9 @@
     r.className = dup ? 'duplicate' : 'unique';
     var icon = dup ? WARN : CHK;
     var label = dup ? (WARN + ' REPETIDO') : (CHK + ' \u00danico');
-    r.innerHTML = '<td class="status-icon">' + icon + '</td><td>' + esc(s.code) + '</td>' +
-      '<td><input type="text" class="name-input" value="' + esc(s.name||'') + '" data-code="' + escA(s.code) + '" placeholder="Nombre..." onchange="upd(\'' + escA(s.code) + '\',\'name\',this.value)"></td>' +
-      '<td><input type="text" class="desc-input" value="' + esc(s.descripcion||'') + '" data-code="' + escA(s.code) + '" placeholder="Desc..." onchange="upd(\'' + escA(s.code) + '\',\'descripcion\',this.value)"></td>' +
+    r.innerHTML = '<td>' + (s.id||'') + '</td><td class="status-icon">' + icon + '</td><td>' + esc(s.code) + '</td>' +
+      '<td><input type="text" class="name-input" value="' + esc(s.name||'') + '" data-code="' + escA(s.code) + '" placeholder="Nombre..." onchange="upd(this.dataset.code,\'name\',this.value)"></td>' +
+      '<td><input type="text" class="desc-input" value="' + esc(s.descripcion||'') + '" data-code="' + escA(s.code) + '" placeholder="Desc..." onchange="upd(this.dataset.code,\'descripcion\',this.value)"></td>' +
       '<td class="' + (dup ? 'status-duplicate' : 'status-unique') + '">' + label + '</td>';
     t.insertBefore(r, t.firstChild); cnt();
   }
@@ -355,7 +361,7 @@
     var d = scans.filter(function(s){return s.status==='duplicate';});
     if (d.length===0) { showAlert('No hay duplicados','warning'); return; }
     var wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(d.map(function(s,i){return {'#':i+1,'C\u00f3digo':s.code,'Nombre':s.name||'','Descripci\u00f3n':s.descripcion||''};})), 'Duplicados');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(d.map(function(s,i){return {'#':s.id||i+1,'C\u00f3digo':s.code,'Nombre':s.name||'','Descripci\u00f3n':s.descripcion||''};})), 'Duplicados');
     XLSX.writeFile(wb, 'duplicados_'+Date.now()+'.xlsx');
     showAlert('Exportados '+d.length+' duplicados','success');
   }
@@ -363,7 +369,7 @@
   function exportAllExcel() {
     if (scans.length===0) { showAlert('No hay datos','warning'); return; }
     var wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(scans.map(function(s,i){return {'#':i+1,'C\u00f3digo':s.code,'Nombre':s.name||'','Descripci\u00f3n':s.descripcion||'','Estado':s.status==='duplicate'?'REPETIDO':'\u00danico'};})), 'Escaneos');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(scans.map(function(s,i){return {'#':s.id||i+1,'C\u00f3digo':s.code,'Nombre':s.name||'','Descripci\u00f3n':s.descripcion||'','Estado':s.status==='duplicate'?'REPETIDO':'\u00danico'};})), 'Escaneos');
     XLSX.writeFile(wb, 'escaneos_'+Date.now()+'.xlsx');
     showAlert('Exportados '+scans.length+' registros','success');
   }

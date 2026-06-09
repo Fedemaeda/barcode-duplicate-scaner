@@ -22,6 +22,17 @@ function doGet(e) {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sheet = ss.getActiveSheet();
 
+    // ---- HEADER CHECK (ensure first row has column names) ----
+
+    function ensureHeaders() {
+      var data = sheet.getDataRange().getValues();
+      if (data.length === 0 || String(data[0][0]).trim() !== 'Índice') {
+        sheet.insertRowBefore(1);
+        sheet.getRange(1, 1, 1, 5).setValues([['Índice', 'Código de Barras', 'Nombre del Producto', 'Descripción', 'Estado de Validación']]);
+        SpreadsheetApp.flush();
+      }
+    }
+
     // ---- READ ----
 
     if (action === 'find') {
@@ -53,6 +64,7 @@ function doGet(e) {
       var lock = LockService.getScriptLock();
       lock.tryLock(5000);
       try {
+        ensureHeaders();
         var data = sheet.getDataRange().getValues();
         var found = false;
         for (var i = 1; i < data.length; i++) {
@@ -77,6 +89,7 @@ function doGet(e) {
       var lock = LockService.getScriptLock();
       lock.tryLock(5000);
       try {
+        ensureHeaders();
         var data = sheet.getDataRange().getValues();
         for (var j = 0; j < incoming.length; j++) {
           var item = incoming[j];

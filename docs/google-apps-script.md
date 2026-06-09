@@ -62,7 +62,9 @@ function doGet(e) {
       if (!code) return json({ error: 'Missing code' });
 
       var lock = LockService.getScriptLock();
-      lock.tryLock(5000);
+      var gotLock = lock.tryLock(5000);
+      if (!gotLock) return json({ error: 'No se pudo obtener bloqueo, reintente' });
+
       try {
         ensureHeaders();
         var data = sheet.getDataRange().getValues();

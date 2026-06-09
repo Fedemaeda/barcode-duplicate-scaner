@@ -192,6 +192,13 @@
     if (!c) { processing = false; return; }
     pendingCode = null;
 
+    // Local duplicate check for immediate feedback
+    var localDup = findScan(c);
+    var isDup = !!localDup;
+    if (isDup) {
+      showAlert(WARN + ' Repetido detectado localmente', 'warning');
+    }
+
     // Show saving indicator, hide buttons
     document.getElementById('savingIndicator').style.display = 'block';
     document.querySelectorAll('#nameModal .modal-buttons button').forEach(function(b){b.disabled=true;});
@@ -296,9 +303,11 @@
 
   function sheetFind(code) {
     if (!cfg.scriptUrl) return Promise.reject();
-    return fetch(sheetUrl({ action: 'find', code: code }), { cache: 'no-store' })
-      .then(function(r) { return r.ok ? r.json() : Promise.reject(); })
-      .then(function(d) { return d && d.error ? null : d; })
+    var controller = new AbortController();
+    var timeout = setTimeout(function(){ controller.abort(); }, 3000);
+    return fetch(sheetUrl({ action: 'find', code: code }), { cache: 'no-store', signal: controller.signal })
+      .then(function(r){ clearTimeout(timeout); return r.ok ? r.json() : Promise.reject(r.status); })
+      .then(function(d){ return d && d.error ? null : d; })
       .catch(function() { return null; });
   }
 

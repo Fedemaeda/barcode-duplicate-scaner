@@ -192,7 +192,14 @@
     let isScanPaused = false;
     let pendingCode = null;
     let pendingDesc = null;
-    let config = JSON.parse(localStorage.getItem(CONFIG_KEY)) || { scriptUrl: '' };
+    const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbziTsF2rGhkxUf6TgmshMtIvoynIZp5XatQbGpvu6SekHWRC3vTMAqzROZsAtZX9iAj/exec';
+    let stored = JSON.parse(localStorage.getItem(CONFIG_KEY));
+    if (stored && stored.scriptUrl) {
+      var config = stored;
+    } else {
+      var config = { scriptUrl: DEFAULT_SCRIPT_URL };
+      localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+    }
 
     // ---------- SCANNER ----------
 

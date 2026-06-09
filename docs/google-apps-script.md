@@ -55,7 +55,7 @@ function doGet(e) {
       return json(rows);
     }
 
-    // ---- WRITE (lock + flush for reliability) ----
+    // ---- WRITE (always append, never update existing rows) ----
 
     if (action === 'addScan') {
       var code = (params.code || '').trim();
@@ -66,19 +66,9 @@ function doGet(e) {
       try {
         ensureHeaders();
         var data = sheet.getDataRange().getValues();
-        var found = false;
-        for (var i = 1; i < data.length; i++) {
-          if (data[i][1] && String(data[i][1]).trim() === code) {
-            sheet.getRange(i + 1, 5).setValue(params.estado || '✓ Único');
-            found = true;
-            break;
-          }
-        }
-        if (!found) {
-          sheet.appendRow([data.length, code, params.nombre || '', params.descripcion || '', params.estado || '✓ Único']);
-        }
+        sheet.appendRow([data.length, code, params.nombre || '', params.descripcion || '', params.estado || '✓ Único']);
         SpreadsheetApp.flush();
-        return json({ success: true, updated: found, isNew: !found });
+        return json({ success: true });
       } finally {
         lock.releaseLock();
       }
@@ -94,18 +84,7 @@ function doGet(e) {
         for (var j = 0; j < incoming.length; j++) {
           var item = incoming[j];
           if (!item.code) continue;
-          var itemFound = false;
-          for (var i = 1; i < data.length; i++) {
-            if (data[i][1] && String(data[i][1]).trim() === item.code) {
-              var estado = item.status === 'duplicate' ? '⚠️ REPETIDO' : '✓ Único';
-              sheet.getRange(i + 1, 5).setValue(estado);
-              itemFound = true;
-              break;
-            }
-          }
-          if (!itemFound) {
-            sheet.appendRow([data.length, item.code, item.name || '', item.descripcion || '', item.status === 'duplicate' ? '⚠️ REPETIDO' : '✓ Único']);
-          }
+          sheet.appendRow([data.length + j, item.code, item.name || '', item.descripcion || '', item.status === 'duplicate' ? '⚠️ REPETIDO' : '✓ Único']);
         }
         SpreadsheetApp.flush();
         return json({ success: true, synced: incoming.length });

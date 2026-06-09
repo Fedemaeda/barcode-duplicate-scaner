@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>DupliScan - Lector de Códigos</title>
+  <title>DupliScan</title>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
@@ -18,7 +18,7 @@
     .header-left h1 { font-size: 18px; }
     #scanCount { font-size: 14px; color: #888; }
     .config-btn { background: none; border: 1px solid #333; color: #aaa; width: 36px; height: 36px; border-radius: 8px; font-size: 18px; cursor: pointer; }
-    .config-btn:hover { border-color: #1d4ed8; color: #fff; }
+    .config-btn:hover { border-color: #2563eb; color: #fff; }
     .sheet-status { font-size: 11px; color: #555; }
     .sheet-status.connected { color: #52b788; }
     .sheet-status.disconnected { color: #ff6b6b; }
@@ -32,13 +32,13 @@
     #results-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; flex-wrap: wrap; gap: 8px; }
     #results-header h2 { font-size: 16px; }
     .header-buttons { display: flex; gap: 6px; flex-wrap: wrap; }
-    .header-buttons button { background: #1d4ed8; color: #fff; border: none; padding: 7px 14px; border-radius: 8px; font-size: 13px; cursor: pointer; white-space: nowrap; }
+    .header-buttons button { background: #2563eb; color: #fff; border: none; padding: 7px 14px; border-radius: 8px; font-size: 13px; cursor: pointer; white-space: nowrap; }
     #table-wrapper { overflow-x: auto; padding: 0 6px; }
     table { width: 100%; border-collapse: collapse; }
     th { background: #1a1a2e; padding: 8px 6px; text-align: left; font-size: 12px; color: #666; position: sticky; top: 52px; white-space: nowrap; }
     td { padding: 6px; border-bottom: 1px solid #1a1a2e; font-size: 13px; vertical-align: middle; }
     .name-input, .desc-input { background: transparent; border: 1px solid #2a2a3e; border-radius: 4px; color: #e0e0e0; padding: 3px 5px; font-size: 12px; width: 100%; min-width: 80px; outline: none; }
-    .name-input:focus, .desc-input:focus { border-color: #1d4ed8; }
+    .name-input:focus, .desc-input:focus { border-color: #2563eb; }
     tr.duplicate { background: #2d1a1a; }
     .status-icon { font-size: 16px; text-align: center; width: 28px; }
     .status-duplicate { color: #ff4444; font-weight: bold; font-size: 12px; }
@@ -52,11 +52,11 @@
     .modal-content h3 { margin-bottom: 12px; font-size: 16px; }
     .modal-content label { display: block; font-size: 13px; color: #888; margin-bottom: 4px; }
     .modal-content input { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #333; background: #0f0f1a; color: #e0e0e0; font-size: 14px; margin-bottom: 12px; outline: none; }
-    .modal-content input:focus { border-color: #1d4ed8; }
+    .modal-content input:focus { border-color: #2563eb; }
     .modal-content .code-display { color: #888; font-size: 13px; margin-bottom: 12px; word-break: break-all; }
     .modal-buttons { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
     .modal-buttons button { padding: 9px 18px; border-radius: 8px; border: none; font-size: 14px; cursor: pointer; }
-    .btn-primary { background: #1d4ed8; color: #fff; }
+    .btn-primary { background: #2563eb; color: #fff; }
     .btn-secondary { background: #333; color: #aaa; }
     .modal-section { border-top: 1px solid #2a2a3e; padding-top: 16px; margin-top: 16px; }
     .modal-section h4 { font-size: 14px; margin-bottom: 10px; color: #ccc; }
@@ -72,22 +72,22 @@
   <div id="app">
     <header>
       <div class="header-left">
-        <h1>📷 DupliScan</h1>
+        <h1>&#x1F4F7; DupliScan</h1>
         <span id="scanCount">0</span>
       </div>
       <div style="display:flex;align-items:center;gap:8px;">
-        <span class="sheet-status disconnected" id="sheetStatus">⛔ Sheet</span>
-        <button class="config-btn" onclick="openConfig()">⚙️</button>
+        <span class="sheet-status disconnected" id="sheetStatus">&#x26A0;&#xFE0F; Sheet</span>
+        <button class="config-btn" onclick="openConfig()">&#x2699;&#xFE0F;</button>
       </div>
     </header>
     <div id="scanner-container"></div>
-    <div id="lastScan">Esperando código...<span class="desc" id="lastScanDesc"></span></div>
+    <div id="lastScan">Esperando c&oacute;digo...<span class="desc" id="lastScanDesc"></span></div>
     <div id="alert"></div>
     <div id="results-header">
       <h2>Resultados</h2>
       <div class="header-buttons">
-        <button onclick="exportDupExcel()">📥 Excel duplicados</button>
-        <button onclick="exportAllExcel()">📥 Excel todo</button>
+        <button onclick="exportDupExcel()">&#x1F4E5; Duplicados</button>
+        <button onclick="exportAllExcel()">&#x1F4E5; Todo</button>
       </div>
     </div>
     <div id="table-wrapper">
@@ -95,9 +95,9 @@
         <thead>
           <tr>
             <th style="width:28px"></th>
-            <th>Código</th>
+            <th>C&oacute;digo</th>
             <th>Nombre</th>
-            <th>Descripción</th>
+            <th>Descripci&oacute;n</th>
             <th style="width:40px">Veces</th>
             <th style="width:70px">Estado</th>
           </tr>
@@ -106,17 +106,17 @@
       </table>
     </div>
     <div id="actions">
-      <button id="clearBtn" onclick="clearAll()">🗑️ Limpiar todo</button>
+      <button id="clearBtn" onclick="clearAll()">&#x1F5D1;&#xFE0F; Limpiar todo</button>
     </div>
   </div>
 
   <div class="modal" id="nameModal">
     <div class="modal-content">
-      <h3>📦 Nuevo código</h3>
+      <h3>&#x1F4E6; Nuevo c&oacute;digo</h3>
       <div class="code-display" id="modalCode"></div>
       <label>Nombre del producto</label>
       <input type="text" id="modalNameInput" placeholder="..." autocomplete="off">
-      <label>Descripción</label>
+      <label>Descripci&oacute;n</label>
       <input type="text" id="modalDescInput" placeholder="Lote, estante..." autocomplete="off">
       <div class="modal-buttons">
         <button class="btn-secondary" onclick="skipName()">Omitir</button>
@@ -127,26 +127,26 @@
 
   <div class="modal" id="configModal">
     <div class="modal-content">
-      <h3>⚙️ Configuración</h3>
+      <h3>&#x2699;&#xFE0F; Configuraci&oacute;n</h3>
       <label>URL del Google Apps Script</label>
       <input type="url" id="scriptUrlInput" placeholder="https://script.google.com/macros/s/..." autocomplete="off">
       <div style="display:flex;gap:8px;margin-bottom:16px;">
-        <button class="btn-primary" onclick="testConnection()">🔌 Probar conexión</button>
-        <button class="btn-secondary" onclick="saveConfig()">💾 Guardar</button>
+        <button class="btn-primary" onclick="testConnection()">&#x1F50C; Probar</button>
+        <button class="btn-secondary" onclick="saveConfig()">&#x1F4BE; Guardar</button>
       </div>
       <div id="connectionStatus" class="status-text"></div>
       <div class="modal-section">
-        <h4>📊 Google Sheet</h4>
-        <button class="btn-primary" onclick="syncAllToSheet()" style="width:100%;margin-bottom:4px;">🔄 Sincronizar todo</button>
-        <button class="btn-primary" onclick="window.location.href='https://docs.google.com/spreadsheets/d/1Y18brymhRJ3KdE2-tHF8bjJxobzlvHjKDtGEdsvhMlE/edit'" style="width:100%;margin-bottom:4px;">📄 Abrir Google Sheet</button>
+        <h4>&#x1F4CA; Google Sheet</h4>
+        <button class="btn-primary" onclick="syncAllToSheet()" style="width:100%;margin-bottom:4px;">&#x1F504; Sincronizar todo</button>
+        <button class="btn-primary" onclick="window.location.href='https://docs.google.com/spreadsheets/d/1Y18brymhRJ3KdE2-tHF8bjJxobzlvHjKDtGEdsvhMlE/edit'" style="width:100%;margin-bottom:4px;">&#x1F4C4; Abrir Google Sheet</button>
       </div>
       <div class="modal-section">
-        <h4>💾 Backup</h4>
+        <h4>&#x1F4BE; Backup</h4>
         <div style="display:flex;gap:8px;margin-bottom:12px;">
-          <button class="btn-primary" onclick="downloadBackup()">📥 Descargar</button>
+          <button class="btn-primary" onclick="downloadBackup()">&#x1F4E5; Descargar</button>
         </div>
         <div class="file-upload">
-          <label for="restoreFile">📂 Restaurar (JSON)</label>
+          <label for="restoreFile">&#x1F4C2; Restaurar (JSON)</label>
           <input type="file" id="restoreFile" accept=".json" onchange="restoreBackup(event)">
         </div>
         <div id="backupStatus" class="status-text"></div>
@@ -158,129 +158,77 @@
   </div>
 
   <script>
-  // ── CONFIG ──────────────────────────────────────────────
-  const STATE_KEY = 'barcode_scanner_state';
-  const CONFIG_KEY = 'dupliscan_config';
-  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxwI8FsLZ3F5msFsQ5aot7jPpSDkU5DrJzExEutnncM--knwuGTW-z80s25TwiqBpCo/exec';
+  var ST = 'barcode_scanner_state', CK = 'dupliscan_config';
+  var SU = 'https://script.google.com/macros/s/AKfycbxwI8FsLZ3F5msFsQ5aot7jPpSDkU5DrJzExEutnncM--knwuGTW-z80s25TwiqBpCo/exec';
+  var scans = JSON.parse(localStorage.getItem(ST)) || [];
+  var cfg = JSON.parse(localStorage.getItem(CK));
+  if (!cfg || !cfg.scriptUrl) { cfg = { scriptUrl: SU }; localStorage.setItem(CK, JSON.stringify(cfg)); }
+  var processing = false, pendingCode = null, qr = null;
 
-  let scans = JSON.parse(localStorage.getItem(STATE_KEY)) || [];
-  let config = JSON.parse(localStorage.getItem(CONFIG_KEY));
-  if (!config || !config.scriptUrl) {
-    config = { scriptUrl: SCRIPT_URL };
-    localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
-  }
-  let processing = false;
-  let pendingCode = null;
-  let html5QrCode = null;
+  var CI = '\uD83D\uDCF7', CHK = '\u2705', WARN = '\u26A0\uFE0F', BOX = '\uD83D\uDCE6';
 
-  // ── SCANNER ──────────────────────────────────────────────
   function startScanner() {
     try {
-      html5QrCode = new Html5Qrcode("scanner-container");
-      html5QrCode.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: function(vw, vh) {
-            var min = Math.min(vw, vh) * 0.7;
-            return { width: min, height: min * 0.5 };
-          }
-        },
-        onScan,
-        function() {}
-      );
+      qr = new Html5Qrcode("scanner-container");
+      qr.start({ facingMode: "environment" }, { fps: 10, qrbox: function(vw, vh) {
+        var m = Math.min(vw, vh) * 0.7; return { width: m, height: m * 0.5 };
+      }}, onScan, function(){});
     } catch(e) {
-      document.getElementById('scanner-container').innerHTML =
-        '<p style="color:#ff6b6b;padding:20px;text-align:center;">Error cámara: ' + e.message + '</p>';
+      document.getElementById('scanner-container').innerHTML = '<p style="color:#ff6b6b;padding:20px;text-align:center;">Error c\u00e1mara: ' + e.message + '</p>';
     }
   }
 
-  // ── SCAN PIPELINE ─────────────────────────────────────────
-  // Simple state machine:
-  //   Not processing → code detected → processing = true
-  //     → check local → duplicate? → update table → processing = false
-  //     → check sheet → found? → add to table → processing = false
-  //                     → not found? → show modal → user saves → processing = false
-  //   ALL paths unlock processing. No race conditions.
-
-  function onScan(decodedText) {
+  function onScan(t) {
     if (processing) return;
-    var code = (decodedText || '').trim();
-    if (!code) return;
-
+    var c = (t||'').trim();
+    if (!c) return;
     processing = true;
     try { navigator.vibrate(100); } catch(e) {}
-
-    flashLine(code);
-
-    // Check local duplicates first (synchronous)
-    var local = findScan(code);
+    flashLine(c);
+    var local = findScan(c);
     if (local) {
-      local.count += 1;
-      local.status = 'duplicate';
-      saveState();
+      local.count++; local.status = 'duplicate'; saveState();
       updateRow(local);
-      showLast(code, local.name, local.descripcion, true);
-      showAlert('⚠️ REPETIDO: ' + code, 'warning');
-      sheetAddScan(local);
-      processing = false;
-      return;
+      showLast(c, local.name, local.descripcion, true);
+      showAlert(WARN + ' Repetido: ' + c, 'warning');
+      sheetAdd(local);
+      processing = false; return;
     }
-
-    // New code — check sheet lookup
-    sheetFind(code).then(function(data) {
-      if (data && data.found) {
-        addScan(code, data.nombre || '', data.descripcion || '', false);
-        showAlert('✅ ' + (data.nombre || code) + ' — desde Sheet', 'success');
-        sheetAddScan(scans[scans.length - 1]);
+    sheetFind(c).then(function(d) {
+      if (d && d.found) {
+        addScan(c, d.nombre||'', d.descripcion||'');
+        showAlert(CHK + ' ' + (d.nombre||c), 'success');
+        sheetAdd(scans[scans.length-1]);
         processing = false;
-      } else if (data && data.error) {
-        // Sheet error — still allow manual entry
-        showNameModal(code);
-      } else {
-        // Not found in sheet — ask for name
-        showNameModal(code);
-      }
-    }).catch(function() {
-      // Network error — still allow manual entry
-      showNameModal(code);
-    });
+      } else { showNameModal(c); }
+    }).catch(function() { showNameModal(c); });
   }
 
-  function findScan(code) {
-    for (var i = 0; i < scans.length; i++) {
-      if (scans[i].code === code) return scans[i];
-    }
-    return null;
+  function findScan(c) { for (var i=0;i<scans.length;i++) { if (scans[i].code===c) return scans[i]; } return null; }
+
+  function addScan(c, n, d) {
+    scans.push({code:c,name:n,descripcion:d,count:1,status:'unique'});
+    saveState(); addRow(scans[scans.length-1]); showLast(c,n,d,false);
   }
 
-  function addScan(code, name, desc, fromSheet) {
-    scans.push({ code: code, name: name, descripcion: desc, count: 1, status: 'unique' });
-    saveState();
-    addRow(scans[scans.length - 1]);
-    showLast(code, name, desc, false);
-  }
-
-  function showNameModal(code) {
-    pendingCode = code;
-    document.getElementById('modalCode').textContent = '📦 ' + code;
+  function showNameModal(c) {
+    pendingCode = c;
+    document.getElementById('modalCode').textContent = BOX + ' ' + c;
     document.getElementById('modalNameInput').value = '';
     document.getElementById('modalDescInput').value = '';
     document.getElementById('nameModal').classList.add('active');
-    setTimeout(function() { document.getElementById('modalNameInput').focus(); }, 300);
+    setTimeout(function(){document.getElementById('modalNameInput').focus();},300);
   }
 
-  // ── NAME MODAL ────────────────────────────────────────────
   function saveName() {
-    var name = document.getElementById('modalNameInput').value.trim();
-    var desc = document.getElementById('modalDescInput').value.trim();
-    var code = pendingCode;
-    if (!code) { processing = false; return; }
+    var n = document.getElementById('modalNameInput').value.trim();
+    var d = document.getElementById('modalDescInput').value.trim();
+    var c = pendingCode;
+    if (!c) { processing = false; return; }
     pendingCode = null;
-
-    addScan(code, name, desc, false);
-    var s = scans[scans.length - 1];
-    showAlert('✅ ' + (name || code), 'success');
-    sheetAddScan(s);
-
+    addScan(c, n, d);
+    showAlert(CHK + ' ' + (n||c), 'success');
+    sheetAdd(scans[scans.length-1]);
     document.getElementById('nameModal').classList.remove('active');
     processing = false;
   }
@@ -292,245 +240,173 @@
   }
 
   document.getElementById('modalNameInput').addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') document.getElementById('modalDescInput').focus();
+    if (e.key==='Enter') document.getElementById('modalDescInput').focus();
   });
   document.getElementById('modalDescInput').addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') saveName();
+    if (e.key==='Enter') saveName();
   });
 
-  // ── TABLE ──────────────────────────────────────────────────
-  function addRow(scan) {
-    var tbody = document.getElementById('tableBody');
-    var tr = document.createElement('tr');
-    tr.className = 'unique';
-    tr.setAttribute('data-code', scan.code);
-    tr.innerHTML =
-      '<td class="status-icon">✅</td>' +
-      '<td>' + esc(scan.code) + '</td>' +
-      '<td><input type="text" class="name-input" value="' + esc(scan.name || '') + '" data-code="' + escAttr(scan.code) + '" placeholder="Nombre..." onchange="updateField(this.dataset.code,\'name\',this.value)"></td>' +
-      '<td><input type="text" class="desc-input" value="' + esc(scan.descripcion || '') + '" data-code="' + escAttr(scan.code) + '" placeholder="Desc..." onchange="updateField(this.dataset.code,\'descripcion\',this.value)"></td>' +
-      '<td class="count-cell">1</td>' +
-      '<td class="status-unique">Único</td>';
-    tbody.insertBefore(tr, tbody.firstChild);
-    updateCounter();
+  function addRow(s) {
+    var t = document.getElementById('tableBody');
+    var r = document.createElement('tr'); r.className = 'unique';
+    r.setAttribute('data-code', s.code);
+    r.innerHTML = '<td class="status-icon">' + CHK + '</td><td>' + esc(s.code) + '</td>' +
+      '<td><input type="text" class="name-input" value="' + esc(s.name||'') + '" data-code="' + escA(s.code) + '" placeholder="Nombre..." onchange="upd(this.dataset.code,\'name\',this.value)"></td>' +
+      '<td><input type="text" class="desc-input" value="' + esc(s.descripcion||'') + '" data-code="' + escA(s.code) + '" placeholder="Desc..." onchange="upd(this.dataset.code,\'descripcion\',this.value)"></td>' +
+      '<td class="count-cell">1</td><td class="status-unique">' + CHK + ' \u00danico</td>';
+    t.insertBefore(r, t.firstChild); cnt();
   }
 
-  function updateRow(scan) {
-    var tr = document.getElementById('tableBody').querySelector('tr[data-code="' + escAttr(scan.code) + '"]');
-    if (!tr) { addRow(scan); return; }
-    tr.className = 'duplicate';
-    tr.querySelector('.status-icon').textContent = '⚠️';
-    tr.querySelector('.count-cell').textContent = scan.count;
-    try { tr.querySelector('.status-unique').className = 'status-duplicate'; } catch(e) {}
-    try { tr.querySelector('.status-duplicate').textContent = 'REPETIDO'; } catch(e) {}
-    document.getElementById('tableBody').insertBefore(tr, document.getElementById('tableBody').firstChild);
+  function updateRow(s) {
+    var t = document.getElementById('tableBody');
+    var r = t.querySelector('tr[data-code="'+escA(s.code)+'"]');
+    if (!r) { addRow(s); return; }
+    r.className = 'duplicate';
+    r.querySelector('.status-icon').textContent = WARN;
+    r.querySelector('.count-cell').textContent = s.count;
+    var sc = r.querySelector('.status-unique');
+    if (sc) { sc.textContent = WARN + ' REPETIDO'; sc.className = 'status-duplicate'; }
+    t.insertBefore(r, t.firstChild);
   }
 
-  function updateField(code, field, value) {
-    var s = findScan(code);
-    if (s) { s[field] = value; saveState(); }
-  }
+  function upd(c, f, v) { var s = findScan(c); if (s) { s[f]=v; saveState(); } }
 
-  function renderAllRows() {
-    var tbody = document.getElementById('tableBody');
-    tbody.innerHTML = '';
-    var sorted = scans.slice().sort(function(a, b) {
-      if (a.status === 'duplicate' && b.status !== 'duplicate') return -1;
-      if (a.status !== 'duplicate' && b.status === 'duplicate') return 1;
+  function renderAll() {
+    var t = document.getElementById('tableBody'); t.innerHTML = '';
+    var a = scans.slice().sort(function(a,b){
+      if (a.status==='duplicate'&&b.status!=='duplicate') return -1;
+      if (a.status!=='duplicate'&&b.status==='duplicate') return 1;
       return 0;
     });
-    for (var i = 0; i < sorted.length; i++) {
-      if (sorted[i].status === 'duplicate') updateRow(sorted[i]);
-      else addRow(sorted[i]);
-    }
-    updateCounter();
+    for (var i=0;i<a.length;i++) { if (a[i].status==='duplicate') updateRow(a[i]); else addRow(a[i]); }
+    cnt();
   }
 
-  function updateCounter() {
-    document.getElementById('scanCount').textContent = scans.length;
+  function cnt() { document.getElementById('scanCount').textContent = scans.length; }
+
+  function flashLine(c) {
+    var e = document.getElementById('lastScan');
+    e.innerHTML = CI + ' ' + esc(c) + '<span class="desc"></span>';
+    e.style.background = '#2563eb';
+    setTimeout(function(){e.style.background='#1a1a2e';}, 300);
   }
 
-  // ── UI HELPERS ────────────────────────────────────────────
-  function flashLine(code) {
-    var el = document.getElementById('lastScan');
-    el.innerHTML = '📷 ' + esc(code) + '<span class="desc"></span>';
-    el.style.background = '#1d4ed8';
-    setTimeout(function() { el.style.background = '#1a1a2e'; }, 300);
+  function showLast(c, n, d, dup) {
+    var e = document.getElementById('lastScan');
+    e.innerHTML = '\u00daltimo: ' + esc(c) + (n?' \u2014 '+esc(n):'') + '<span class="desc">' + esc(d||'') + '</span>';
+    e.style.color = dup ? '#ff6b6b' : '#52b788';
   }
 
-  function showLast(code, name, desc, isDup) {
-    var el = document.getElementById('lastScan');
-    el.innerHTML = 'Último: ' + esc(code) + (name ? ' — ' + esc(name) : '') + '<span class="desc">' + esc(desc || '') + '</span>';
-    el.style.color = isDup ? '#ff6b6b' : '#52b788';
+  function showAlert(m, t) {
+    var e = document.getElementById('alert');
+    e.textContent = m; e.className = t;
+    clearTimeout(e._to); e._to = setTimeout(function(){e.style.display='none';},2500);
   }
 
-  function showAlert(msg, type) {
-    var el = document.getElementById('alert');
-    el.textContent = msg;
-    el.className = type;
-    clearTimeout(el._timeout);
-    el._timeout = setTimeout(function() { el.style.display = 'none'; }, 2500);
-  }
-
-  function esc(text) {
-    var d = document.createElement('div');
-    d.textContent = text;
-    return d.innerHTML;
-  }
-  function escAttr(text) {
-    return String(text).replace(/"/g, '&quot;');
-  }
-
-  function saveState() {
-    localStorage.setItem(STATE_KEY, JSON.stringify(scans));
-  }
+  function esc(t) { var d=document.createElement('div'); d.textContent=t; return d.innerHTML; }
+  function escA(t) { return String(t).replace(/"/g,'&quot;'); }
+  function saveState() { localStorage.setItem(ST, JSON.stringify(scans)); }
 
   function clearAll() {
-    if (!confirm('¿Limpiar todos los escaneos?')) return;
-    scans = [];
-    saveState();
-    renderAllRows();
-    document.getElementById('lastScan').innerHTML = 'Esperando código...<span class="desc"></span>';
+    if (!confirm('\u00bfLimpiar todos los escaneos?')) return;
+    scans = []; saveState(); renderAll();
+    document.getElementById('lastScan').innerHTML = 'Esperando c\u00f3digo...<span class="desc"></span>';
   }
 
-  // ── SHEET ──────────────────────────────────────────────────
-  function sheetUrl(params) {
-    params._cb = Date.now();
-    return config.scriptUrl + '?' + new URLSearchParams(params).toString();
+  function su(p) { p._cb = Date.now(); return cfg.scriptUrl + '?' + new URLSearchParams(p).toString(); }
+
+  function sheetFind(c) {
+    if (!cfg.scriptUrl) return Promise.reject();
+    return fetch(su({action:'find',code:c}),{cache:'no-store'})
+      .then(function(r){return r.ok?r.json():Promise.reject();})
+      .then(function(d){return d.error?null:d;}).catch(function(){return null;});
   }
 
-  function sheetFind(code) {
-    if (!config.scriptUrl) return Promise.reject();
-    return fetch(sheetUrl({ action: 'find', code: code }), { cache: 'no-store' })
-      .then(function(r) { return r.ok ? r.json() : Promise.reject(); })
-      .then(function(d) { return d.error ? null : d; })
-      .catch(function() { return null; });
-  }
-
-  function sheetAddScan(scan) {
-    if (!config.scriptUrl) return;
-    fetch(sheetUrl({
-      action: 'addScan',
-      code: scan.code,
-      nombre: scan.name || '',
-      descripcion: scan.descripcion || '',
-      estado: scan.status === 'duplicate' ? '⚠️ REPETIDO' : '✓ Único'
-    }), { cache: 'no-store', method: 'GET' })
-      .then(function(r) { if (r.ok) updateSheetStatus(true); })
-      .catch(function() { updateSheetStatus(false); });
+  function sheetAdd(s) {
+    if (!cfg.scriptUrl) return;
+    fetch(su({action:'addScan',code:s.code,nombre:s.name||'',descripcion:s.descripcion||'',estado:s.status==='duplicate'?WARN+' REPETIDO':CHK+' \u00danico'}),{cache:'no-store'})
+      .then(function(r){if(r.ok) ss(true);}).catch(function(){ss(false);});
   }
 
   function syncAllToSheet() {
-    if (!config.scriptUrl) { showAlert('⛔ No hay URL configurada', 'warning'); return; }
-    if (scans.length === 0) { showAlert('No hay datos', 'warning'); return; }
-    fetch(sheetUrl({ action: 'syncAll', scans: JSON.stringify(scans) }), { cache: 'no-store' })
-      .then(function(r) {
-        if (r.ok) { showAlert('✅ Sincronizados ' + scans.length + ' registros', 'success'); updateSheetStatus(true); }
-        else { showAlert('⛔ Error HTTP ' + r.status, 'warning'); }
-      })
-      .catch(function() { showAlert('⛔ Error de red', 'warning'); });
+    if (!cfg.scriptUrl) { showAlert('No hay URL', 'warning'); return; }
+    if (scans.length===0) { showAlert('No hay datos', 'warning'); return; }
+    fetch(su({action:'syncAll',scans:JSON.stringify(scans)}),{cache:'no-store'})
+      .then(function(r){if(r.ok){showAlert('Sincronizados '+scans.length,'success');ss(true);}else{showAlert('Error HTTP '+r.status,'warning');}})
+      .catch(function(){showAlert('Error de red','warning');});
   }
 
-  function updateSheetStatus(ok) {
-    var el = document.getElementById('sheetStatus');
-    el.textContent = ok ? '✅ Sheet' : '⛔ Sheet';
-    el.className = 'sheet-status ' + (ok ? 'connected' : 'disconnected');
+  function ss(ok) {
+    document.getElementById('sheetStatus').textContent = ok ? (CHK + ' Sheet') : (WARN + ' Sheet');
+    document.getElementById('sheetStatus').className = 'sheet-status ' + (ok?'connected':'disconnected');
   }
 
-  // ── CONFIG MODAL ──────────────────────────────────────────
   function openConfig() {
-    document.getElementById('scriptUrlInput').value = config.scriptUrl || '';
+    document.getElementById('scriptUrlInput').value = cfg.scriptUrl||'';
     document.getElementById('connectionStatus').textContent = '';
     document.getElementById('backupStatus').textContent = '';
     document.getElementById('configModal').classList.add('active');
   }
-  function closeConfig() {
-    document.getElementById('configModal').classList.remove('active');
-  }
-  function saveConfig() {
-    config.scriptUrl = document.getElementById('scriptUrlInput').value.trim();
-    localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
-    showAlert('✅ Guardado', 'success');
-  }
+  function closeConfig() { document.getElementById('configModal').classList.remove('active'); }
+  function saveConfig() { cfg.scriptUrl=document.getElementById('scriptUrlInput').value.trim(); localStorage.setItem(CK,JSON.stringify(cfg)); showAlert('Guardado','success'); }
+
   function testConnection() {
-    var url = document.getElementById('scriptUrlInput').value.trim();
-    if (!url) { document.getElementById('connectionStatus').textContent = '❌ Ingresá una URL'; return; }
-    config.scriptUrl = url;
-    localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
-    document.getElementById('connectionStatus').textContent = '🔌 Probando...';
-    fetch(sheetUrl({ action: 'getAll' }), { cache: 'no-store' })
-      .then(function(r) { return r.ok ? r.json() : Promise.reject(r.status); })
-      .then(function(data) {
-        if (data && data.error) { document.getElementById('connectionStatus').textContent = '❌ ' + data.error; return; }
-        updateSheetStatus(true);
-        document.getElementById('connectionStatus').textContent = '✅ Conectado! ' + (Array.isArray(data) ? data.length + ' registros' : '');
-      })
-      .catch(function(e) { document.getElementById('connectionStatus').textContent = '❌ ' + e; });
+    var u = document.getElementById('scriptUrlInput').value.trim();
+    if (!u) { document.getElementById('connectionStatus').textContent = 'Ingrese una URL'; return; }
+    cfg.scriptUrl = u; localStorage.setItem(CK, JSON.stringify(cfg));
+    document.getElementById('connectionStatus').textContent = 'Probando...';
+    fetch(su({action:'getAll'}),{cache:'no-store'})
+      .then(function(r){return r.ok?r.json():Promise.reject(r.status);})
+      .then(function(d){
+        if (d&&d.error) { document.getElementById('connectionStatus').textContent = 'Error: '+d.error; return; }
+        ss(true);
+        document.getElementById('connectionStatus').textContent = 'Conectado! ' + (Array.isArray(d)?d.length+' registros':'');
+      }).catch(function(e){document.getElementById('connectionStatus').textContent = 'Error: '+e;});
   }
 
-  // ── EXCEL ──────────────────────────────────────────────────
   function exportDupExcel() {
-    var dup = scans.filter(function(s) { return s.status === 'duplicate'; });
-    if (dup.length === 0) { showAlert('No hay duplicados', 'warning'); return; }
-    var data = dup.map(function(s, i) { return { '#': i + 1, 'Código': s.code, 'Nombre': s.name || '', 'Descripción': s.descripcion || '', 'Veces': s.count }; });
+    var d = scans.filter(function(s){return s.status==='duplicate';});
+    if (d.length===0) { showAlert('No hay duplicados','warning'); return; }
     var wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), 'Duplicados');
-    XLSX.writeFile(wb, 'duplicados_' + Date.now() + '.xlsx');
-    showAlert('✅ Exportados ' + dup.length + ' duplicados', 'success');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(d.map(function(s,i){return {'#':i+1,'C\u00f3digo':s.code,'Nombre':s.name||'','Descripci\u00f3n':s.descripcion||'','Veces':s.count};})), 'Duplicados');
+    XLSX.writeFile(wb, 'duplicados_'+Date.now()+'.xlsx');
+    showAlert('Exportados '+d.length+' duplicados','success');
   }
 
   function exportAllExcel() {
-    if (scans.length === 0) { showAlert('No hay datos', 'warning'); return; }
-    var data = scans.map(function(s, i) { return { '#': i + 1, 'Código': s.code, 'Nombre': s.name || '', 'Descripción': s.descripcion || '', 'Veces': s.count, 'Estado': s.status === 'duplicate' ? '⚠️ REPETIDO' : '✓ Único' }; });
+    if (scans.length===0) { showAlert('No hay datos','warning'); return; }
     var wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), 'Escaneos');
-    XLSX.writeFile(wb, 'escaneos_' + Date.now() + '.xlsx');
-    showAlert('✅ Exportados ' + scans.length + ' registros', 'success');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(scans.map(function(s,i){return {'#':i+1,'C\u00f3digo':s.code,'Nombre':s.name||'','Descripci\u00f3n':s.descripcion||'','Veces':s.count,'Estado':s.status==='duplicate'?'REPETIDO':'\u00danico'};})), 'Escaneos');
+    XLSX.writeFile(wb, 'escaneos_'+Date.now()+'.xlsx');
+    showAlert('Exportados '+scans.length+' registros','success');
   }
 
-  // ── BACKUP ─────────────────────────────────────────────────
   function downloadBackup() {
-    if (scans.length === 0) { showAlert('No hay datos', 'warning'); return; }
-    var blob = new Blob([JSON.stringify(scans, null, 2)], { type: 'application/json' });
-    var a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'backup_' + Date.now() + '.json';
-    a.click();
-    document.getElementById('backupStatus').textContent = '✅ Backup descargado (' + scans.length + ' registros)';
+    if (scans.length===0) { showAlert('No hay datos','warning'); return; }
+    var b = new Blob([JSON.stringify(scans,null,2)],{type:'application/json'});
+    var a = document.createElement('a'); a.href = URL.createObjectURL(b);
+    a.download = 'backup_'+Date.now()+'.json'; a.click();
+    document.getElementById('backupStatus').textContent = 'Backup descargado ('+scans.length+' registros)';
   }
 
   function restoreBackup(ev) {
-    var file = ev.target.files[0];
-    if (!file) return;
-    var reader = new FileReader();
-    reader.onload = function(e) {
+    var f = ev.target.files[0]; if (!f) return;
+    var r = new FileReader();
+    r.onload = function(e) {
       try {
-        var data = JSON.parse(e.target.result);
-        if (!Array.isArray(data)) throw new Error('Formato inválido');
-        scans = data;
-        saveState();
-        renderAllRows();
-        document.getElementById('backupStatus').textContent = '✅ Restaurados ' + scans.length + ' registros';
-        showAlert('✅ Backup cargado', 'success');
-      } catch(err) {
-        document.getElementById('backupStatus').textContent = '❌ ' + err.message;
-      }
+        var d = JSON.parse(e.target.result);
+        if (!Array.isArray(d)) throw new Error('Formato inv\u00e1lido');
+        scans = d; saveState(); renderAll();
+        document.getElementById('backupStatus').textContent = 'Restaurados '+scans.length+' registros';
+        showAlert('Backup cargado','success');
+      } catch(err) { document.getElementById('backupStatus').textContent = 'Error: '+err.message; }
     };
-    reader.readAsText(file);
-    ev.target.value = '';
+    r.readAsText(f); ev.target.value = '';
   }
 
-  // ── INIT ───────────────────────────────────────────────────
-  startScanner();
-  renderAllRows();
-  if (config.scriptUrl) {
-    fetch(sheetUrl({ action: 'getAll' }), { cache: 'no-store' })
-      .then(function(r) { if (r.ok) updateSheetStatus(true); })
-      .catch(function() {});
-  }
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').catch(function() {});
-  }
+  startScanner(); renderAll();
+  if (cfg.scriptUrl) { fetch(su({action:'getAll'}),{cache:'no-store'}).then(function(r){if(r.ok)ss(true);}).catch(function(){}); }
+  if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(function(){}); }
   </script>
 </body>
 </html>

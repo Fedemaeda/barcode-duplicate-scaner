@@ -251,7 +251,7 @@
       const url = config.scriptUrl;
       if (!url) return null;
       try {
-        const res = await fetch(url + '?action=find&code=' + encodeURIComponent(code));
+        const res = await fetch(url + '?action=find&code=' + encodeURIComponent(code), { method: 'GET', mode: 'cors' });
         if (!res.ok) return null;
         return await res.json();
       } catch {
@@ -270,8 +270,8 @@
         estado: scan.status === 'duplicate' ? '⚠️ REPETIDO' : '✓ Único'
       });
       try {
-        await fetch(url + '?' + params.toString(), { method: 'GET', mode: 'cors' });
-        updateSheetStatus(true);
+        const res = await fetch(url + '?' + params.toString(), { method: 'GET', mode: 'cors' });
+        updateSheetStatus(res.ok);
       } catch {
         updateSheetStatus(false);
       }
@@ -316,11 +316,16 @@
         const res = await fetch(url + '?action=getAll');
         if (res.ok) {
           const data = await res.json();
+          if (data && data.error) {
+            document.getElementById('connectionStatus').textContent = '❌ Script error: ' + data.error;
+            return;
+          }
           updateSheetStatus(true);
           document.getElementById('connectionStatus').textContent =
             '✅ Conectado! ' + (Array.isArray(data) ? data.length + ' registros encontrados' : '');
         } else {
-          document.getElementById('connectionStatus').textContent = '❌ Error: ' + res.status;
+          const body = await res.text().catch(() => '');
+          document.getElementById('connectionStatus').textContent = '❌ HTTP ' + res.status + ': ' + body.slice(0, 200);
         }
       } catch(e) {
         document.getElementById('connectionStatus').textContent = '❌ No se pudo conectar: ' + e.message;

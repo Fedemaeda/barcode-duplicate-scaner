@@ -80,11 +80,16 @@ function doGet(e) {
       lock.tryLock(5000);
       try {
         ensureHeaders();
-        var data = sheet.getDataRange().getValues();
+        // Remove all old data rows (keep header at row 1)
+        var lastRow = sheet.getLastRow();
+        if (lastRow > 1) {
+          sheet.deleteRows(2, lastRow - 1);
+        }
+        // Insert all incoming scans fresh
         for (var j = 0; j < incoming.length; j++) {
           var item = incoming[j];
           if (!item.code) continue;
-          sheet.appendRow([data.length + j, item.code, item.name || '', item.descripcion || '', item.status === 'duplicate' ? '⚠️ REPETIDO' : '✓ Único']);
+          sheet.appendRow([j + 1, item.code, item.name || '', item.descripcion || '', item.status === 'duplicate' ? '⚠️ REPETIDO' : '✓ Único']);
         }
         SpreadsheetApp.flush();
         return json({ success: true, synced: incoming.length });

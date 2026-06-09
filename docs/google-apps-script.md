@@ -96,9 +96,14 @@ function json(obj) {
 }
 ```
 
-4. **Deployar > Nuevo deployment**
+4. **Si es tu primer deploy:** Deployar > Nuevo deployment
    - Tipo: **Web app**
    - Ejecutar como: **Yo**
    - Quién tiene acceso: **Cualquier usuario**
+   - Copiá la URL que te da
 
-5. Copiá la URL que te da.
+5. **Si ya tenías un deploy (actualizar):**
+   - Deployar > **Administrar deployments**
+   - Click en **Editar** (lápiz) sobre tu deployment actual
+   - Click en **Deploy** (no cambia la URL)
+   - La URL sigue siendo la misma, no necesitás actualizar la app

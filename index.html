@@ -208,8 +208,8 @@
     document.getElementById('savingIndicator').style.display = 'block';
     document.querySelectorAll('#nameModal .modal-buttons button').forEach(function(b){b.disabled=true;});
 
-    // Write to sheet — server checks duplicates atomically
-    fetch(sheetUrl({ action: 'addScan', code: c, nombre: n, descripcion: d }), { cache: 'no-store' })
+    // Write to sheet — server checks duplicates atomically; send estado as fallback
+    fetch(sheetUrl({ action: 'addScan', code: c, nombre: n, descripcion: d, estado: localIsDup ? (WARN + ' REPETIDO') : (CHK + ' Único') }), { cache: 'no-store' })
       .then(function(r){ return r.ok ? r.json() : Promise.reject(); })
       .then(function(resp){
         if (resp && resp.error) throw new Error(resp.error);

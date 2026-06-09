@@ -163,7 +163,7 @@
 
       <div class="modal-section">
         <h4>📊 Google Sheet</h4>
-        <button class="btn-primary" onclick="window.open('https://docs.google.com/spreadsheets/d/1Y18brymhRJ3KdE2-tHF8bjJxobzlvHjKDtGEdsvhMlE/edit', '_blank')" style="width:100%;margin-bottom:4px;">📄 Abrir Google Sheet</button>
+        <button class="btn-primary" onclick="window.location.href='https://docs.google.com/spreadsheets/d/1Y18brymhRJ3KdE2-tHF8bjJxobzlvHjKDtGEdsvhMlE/edit'" style="width:100%;margin-bottom:4px;">📄 Abrir Google Sheet en PC</button>
       </div>
 
       <div class="modal-section">
@@ -190,6 +190,7 @@
     let scans = JSON.parse(localStorage.getItem(STATE_KEY)) || [];
     let html5QrCode = null;
     let isScanPaused = false;
+    let scanCooldown = {};
     let pendingCode = null;
     let pendingDesc = null;
     const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbziTsF2rGhkxUf6TgmshMtIvoynIZp5XatQbGpvu6SekHWRC3vTMAqzROZsAtZX9iAj/exec';
@@ -227,31 +228,21 @@
       }
     }
 
-    // Pause scanner while modal is open to avoid duplicate triggers
-    function pauseScanner() {
-      isScanPaused = true;
-    }
-    function resumeScanner() {
-      isScanPaused = false;
-    }
-
     function onScanSuccess(decodedText, decodedResult) {
       if (isScanPaused) return;
       const code = decodedText.trim();
       if (!code) return;
 
-      // Vibrate on scan
-      try { navigator.vibrate(100); } catch(e) {}
+      // Cooldown per code: ignore same code for 5s to avoid re-triggers
+      const now = Date.now();
+      if (scanCooldown[code] && now - scanCooldown[code] < 5000) return;
+      scanCooldown[code] = now;
 
-      // Flash feedback on lastScan
+      // Vibrate + flash feedback
+      try { navigator.vibrate(100); } catch(e) {}
       const ls = document.getElementById('lastScan');
-      ls.style.transition = 'none';
       ls.style.background = '#1d4ed8';
       setTimeout(function() { ls.style.background = '#1a1a2e'; }, 200);
-
-      // Brief pause to avoid re-scanning the same code
-      isScanPaused = true;
-      setTimeout(function() { isScanPaused = false; }, 2000);
 
       const existing = scans.find(s => s.code === code);
       if (existing) {
@@ -263,21 +254,20 @@
         showAlert('⚠️ REPETIDO: ' + code, 'warning');
         sendToSheet(existing);
       } else {
-        // Check if sheet has this code
-        findInSheet(code).then(result => {
+        findInSheet(code).then(function(result) {
           if (result && result.found) {
             scans.push({
-              code, name: result.nombre || '', descripcion: result.descripcion || '',
+              code: code, name: result.nombre || '', descripcion: result.descripcion || '',
               count: 1, status: 'unique'
             });
             saveState();
-            const s = scans[scans.length - 1];
+            var s = scans[scans.length - 1];
             addRow(s);
             showLastScan(code, s.name, s.descripcion, false);
-            showAlert('✅ Cargado desde Sheet: ' + (s.name || code), 'success');
+            showAlert('✅ ' + (s.name || code) + ' — desde Sheet', 'success');
             sendToSheet(s);
           } else {
-            pauseScanner();
+            isScanPaused = true;
             pendingCode = code;
             document.getElementById('modalCode').textContent = '📦 ' + code;
             document.getElementById('modalNameInput').value = '';
@@ -291,24 +281,30 @@
 
     function onScanError(err) {}
 
-    // ---------- SHEET LOOKUP ----------
+    // ---------- SHEET ----------
 
     async function findInSheet(code) {
-      const url = config.scriptUrl;
+      var url = config.scriptUrl;
       if (!url) return null;
       try {
-        const res = await fetch(url + '?action=find&code=' + encodeURIComponent(code), { method: 'GET', mode: 'cors' });
+        var res = await fetch(url + '?action=find&code=' + encodeURIComponent(code), { method: 'GET', mode: 'cors' });
         if (!res.ok) return null;
-        return await res.json();
-      } catch {
+        var data = await res.json();
+        if (data && data.error) {
+          showAlert('❌ Sheet: ' + data.error, 'warning');
+          return null;
+        }
+        return data;
+      } catch(e) {
+        showAlert('⛔ Error al consultar Sheet: ' + e.message, 'warning');
         return null;
       }
     }
 
     async function sendToSheet(scan) {
-      const url = config.scriptUrl;
+      var url = config.scriptUrl;
       if (!url) return;
-      const params = new URLSearchParams({
+      var params = new URLSearchParams({
         action: 'addScan',
         code: scan.code,
         nombre: scan.name || '',
@@ -316,15 +312,17 @@
         estado: scan.status === 'duplicate' ? '⚠️ REPETIDO' : '✓ Único'
       });
       try {
-        const res = await fetch(url + '?' + params.toString(), { method: 'GET', mode: 'cors' });
+        var res = await fetch(url + '?' + params.toString(), { method: 'GET', mode: 'cors' });
+        if (!res.ok) showAlert('⛔ Sheet error HTTP ' + res.status, 'warning');
         updateSheetStatus(res.ok);
-      } catch {
+      } catch(e) {
+        showAlert('⛔ Error de red al enviar al Sheet', 'warning');
         updateSheetStatus(false);
       }
     }
 
     function updateSheetStatus(connected) {
-      const el = document.getElementById('sheetStatus');
+      var el = document.getElementById('sheetStatus');
       el.textContent = connected ? '✅ Sheet' : '⛔ Sheet';
       el.className = 'sheet-status ' + (connected ? 'connected' : 'disconnected');
     }
@@ -381,18 +379,19 @@
     // ---------- NAME MODAL ----------
 
     function saveName() {
-      const name = document.getElementById('modalNameInput').value.trim();
-      const desc = document.getElementById('modalDescInput').value.trim();
+      var name = document.getElementById('modalNameInput').value.trim();
+      var desc = document.getElementById('modalDescInput').value.trim();
       if (pendingCode) {
-        scans.push({ code: pendingCode, name, descripcion: desc, count: 1, status: 'unique' });
+        scans.push({ code: pendingCode, name: name, descripcion: desc, count: 1, status: 'unique' });
         saveState();
-        const s = scans[scans.length - 1];
+        var s = scans[scans.length - 1];
         addRow(s);
         showLastScan(pendingCode, name, desc, false);
-        showAlert('✅ Nuevo: ' + (name || pendingCode), 'success');
+        showAlert('✅ ' + (name || pendingCode), 'success');
         sendToSheet(s);
       }
       pendingCode = null;
+      isScanPaused = false;
       document.getElementById('nameModal').classList.remove('active');
     }
 

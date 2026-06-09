@@ -132,18 +132,29 @@
     </div>
   </div>
 
-  <!-- Modal: Nombre del producto -->
+  <!-- Modal: Nombre del producto (paso 1: entrada) -->
   <div class="modal" id="nameModal">
     <div class="modal-content">
-      <h3>Producto escaneado</h3>
-      <div class="code-display" id="modalCode"></div>
-      <label>Nombre del producto</label>
-      <input type="text" id="modalNameInput" placeholder="..." autocomplete="off">
-      <label>Descripción</label>
-      <input type="text" id="modalDescInput" placeholder="Lote, estante, etc..." autocomplete="off">
-      <div class="modal-buttons">
-        <button class="btn-secondary" onclick="skipName()">Omitir</button>
-        <button class="btn-primary" onclick="saveName()">Guardar</button>
+      <div id="modalStepInput">
+        <h3>📦 Producto escaneado</h3>
+        <div class="code-display" id="modalCode"></div>
+        <label>Nombre del producto</label>
+        <input type="text" id="modalNameInput" placeholder="..." autocomplete="off">
+        <label>Descripción</label>
+        <input type="text" id="modalDescInput" placeholder="Lote, estante, etc..." autocomplete="off">
+        <div class="modal-buttons">
+          <button class="btn-secondary" onclick="skipName()">Omitir</button>
+          <button class="btn-primary" onclick="saveName()">Guardar</button>
+        </div>
+      </div>
+      <div id="modalStepConfirm" style="display:none">
+        <h3>✅ Producto guardado</h3>
+        <div class="code-display" id="modalConfirmCode"></div>
+        <div style="margin-bottom:16px;font-size:14px;" id="modalConfirmName"></div>
+        <div class="modal-buttons">
+          <button class="btn-primary" onclick="scanNext()">📷 Escanear siguiente</button>
+          <button class="btn-secondary" onclick="goHome()">🏠 Volver al home</button>
+        </div>
       </div>
     </div>
   </div>
@@ -269,6 +280,8 @@
           } else {
             isScanPaused = true;
             pendingCode = code;
+            document.getElementById('modalStepInput').style.display = 'block';
+            document.getElementById('modalStepConfirm').style.display = 'none';
             document.getElementById('modalCode').textContent = '📦 ' + code;
             document.getElementById('modalNameInput').value = '';
             document.getElementById('modalDescInput').value = '';
@@ -379,26 +392,68 @@
     // ---------- NAME MODAL ----------
 
     function saveName() {
-      var name = document.getElementById('modalNameInput').value.trim();
-      var desc = document.getElementById('modalDescInput').value.trim();
-      if (pendingCode) {
-        scans.push({ code: pendingCode, name: name, descripcion: desc, count: 1, status: 'unique' });
+      try {
+        var name = document.getElementById('modalNameInput').value.trim();
+        var desc = document.getElementById('modalDescInput').value.trim();
+        var code = pendingCode;
+        if (!code) return;
+
+        scans.push({ code: code, name: name, descripcion: desc, count: 1, status: 'unique' });
         saveState();
         var s = scans[scans.length - 1];
         addRow(s);
-        showLastScan(pendingCode, name, desc, false);
-        showAlert('✅ ' + (name || pendingCode), 'success');
+
+        // Show confirmation step
+        document.getElementById('modalStepInput').style.display = 'none';
+        document.getElementById('modalStepConfirm').style.display = 'block';
+        document.getElementById('modalConfirmCode').textContent = '📦 ' + code;
+        document.getElementById('modalConfirmName').textContent = name
+          ? (name + (desc ? ' — ' + desc : ''))
+          : '';
+
+        showLastScan(code, name, desc, false);
+        showAlert('✅ ' + (name || code), 'success');
+
+        // Try sheet in background — errors won't block the flow
         sendToSheet(s);
+      } catch(e) {
+        showAlert('❌ Error: ' + e.message, 'warning');
+        scanNext();
       }
       pendingCode = null;
-      isScanPaused = false;
-      document.getElementById('nameModal').classList.remove('active');
     }
 
     function skipName() {
       document.getElementById('modalNameInput').value = '';
       document.getElementById('modalDescInput').value = '';
-      saveName();
+      var code = pendingCode;
+      if (!code) return;
+      scans.push({ code: code, name: '', descripcion: '', count: 1, status: 'unique' });
+      saveState();
+      var s = scans[scans.length - 1];
+      addRow(s);
+      showLastScan(code, '', '', false);
+      showAlert('✅ ' + code, 'success');
+      sendToSheet(s);
+      pendingCode = null;
+
+      document.getElementById('modalStepInput').style.display = 'none';
+      document.getElementById('modalStepConfirm').style.display = 'block';
+      document.getElementById('modalConfirmCode').textContent = '📦 ' + code;
+      document.getElementById('modalConfirmName').textContent = '';
+    }
+
+    function scanNext() {
+      pendingCode = null;
+      document.getElementById('modalStepConfirm').style.display = 'none';
+      document.getElementById('modalStepInput').style.display = 'block';
+      document.getElementById('nameModal').classList.remove('active');
+      isScanPaused = false;
+    }
+
+    function goHome() {
+      scanNext();
+      document.getElementById('results-header').scrollIntoView({ behavior: 'smooth' });
     }
 
     document.getElementById('modalNameInput').addEventListener('keydown', function(e) {

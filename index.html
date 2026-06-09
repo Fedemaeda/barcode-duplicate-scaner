@@ -344,7 +344,7 @@
               if (scans[j].id && scans[j].id === r.indice) { exists = true; break; }
             }
             if (!exists) {
-              scans.push({id:r.indice, code:r.codigo, name:r.nombre||'', descripcion:r.descripcion||'', status:r.estado&&r.estado.indexOf('REPETIDO')>=0?'duplicate':'unique'});
+              scans.push({id:r.indice, code:String(r.codigo), name:r.nombre||'', descripcion:r.descripcion||'', status:r.estado&&r.estado.indexOf('REPETIDO')>=0?'duplicate':'unique'});
               added++;
             }
           }
@@ -383,21 +383,34 @@
       }).catch(function(e){document.getElementById('connectionStatus').textContent = 'Error: '+e;});
   }
 
+  function shareOrDownload(wb, name, msg) {
+    var wbout = XLSX.write(wb, {type:'array', bookType:'xlsx'});
+    var blob = new Blob([wbout], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    var file = new File([blob], name, {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    if (navigator.share && navigator.canShare && navigator.canShare({files:[file]})) {
+      navigator.share({files:[file], title: name}).catch(function(){});
+    } else {
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = name;
+      a.click();
+    }
+    showAlert(msg, 'success');
+  }
+
   function exportDupExcel() {
     var d = scans.filter(function(s){return s.status==='duplicate';});
     if (d.length===0) { showAlert('No hay duplicados','warning'); return; }
     var wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(d.map(function(s,i){return {'#':s.id||i+1,'C\u00f3digo':s.code,'Nombre':s.name||'','Descripci\u00f3n':s.descripcion||''};})), 'Duplicados');
-    XLSX.writeFile(wb, 'duplicados_'+Date.now()+'.xlsx');
-    showAlert('Exportados '+d.length+' duplicados','success');
+    shareOrDownload(wb, 'duplicados.xlsx', 'Exportados '+d.length+' duplicados');
   }
 
   function exportAllExcel() {
     if (scans.length===0) { showAlert('No hay datos','warning'); return; }
     var wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(scans.map(function(s,i){return {'#':s.id||i+1,'C\u00f3digo':s.code,'Nombre':s.name||'','Descripci\u00f3n':s.descripcion||'','Estado':s.status==='duplicate'?'REPETIDO':'\u00danico'};})), 'Escaneos');
-    XLSX.writeFile(wb, 'escaneos_'+Date.now()+'.xlsx');
-    showAlert('Exportados '+scans.length+' registros','success');
+    shareOrDownload(wb, 'escaneos.xlsx', 'Exportados '+scans.length+' registros');
   }
 
   function downloadBackup() {

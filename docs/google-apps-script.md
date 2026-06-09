@@ -15,7 +15,6 @@
 ```javascript
 function doGet(e) {
   try {
-    // Handle case where e is undefined (direct test)
     if (!e) return jsonResponse({ error: 'No event data', tip: 'Open the deployed URL in your browser, not the editor' });
 
     const params = e.parameter || {};
@@ -60,22 +59,55 @@ function doGet(e) {
       const code = (params.code || '').trim();
       if (!code) return jsonResponse({ error: 'Missing code' });
 
+      let found = false;
       for (let i = 1; i < data.length; i++) {
         if (data[i][1] && String(data[i][1]).trim() === code) {
           const rowNum = i + 1;
           sheet.getRange(rowNum, 5).setValue(params.estado || '✓ Único');
-          return jsonResponse({ success: true, updated: true });
+          found = true;
+          break;
         }
       }
-      // Not found — add new row
-      sheet.appendRow([
-        data.length,
-        code,
-        params.nombre || '',
-        params.descripcion || '',
-        params.estado || '✓ Único'
-      ]);
-      return jsonResponse({ success: true, isNew: true });
+      if (!found) {
+        sheet.appendRow([
+          data.length,
+          code,
+          params.nombre || '',
+          params.descripcion || '',
+          params.estado || '✓ Único'
+        ]);
+      }
+      SpreadsheetApp.flush();
+      return jsonResponse({ success: true });
+    }
+
+    if (action === 'syncAll') {
+      // Receive multiple scans as JSON array in `scans` parameter
+      const incoming = JSON.parse(params.scans || '[]');
+      for (let j = 0; j < incoming.length; j++) {
+        const item = incoming[j];
+        if (!item.code) continue;
+        let itemFound = false;
+        for (let i = 1; i < data.length; i++) {
+          if (data[i][1] && String(data[i][1]).trim() === item.code) {
+            const rowNum = i + 1;
+            sheet.getRange(rowNum, 5).setValue(item.status === 'duplicate' ? '⚠️ REPETIDO' : '✓ Único');
+            itemFound = true;
+            break;
+          }
+        }
+        if (!itemFound) {
+          sheet.appendRow([
+            data.length,
+            item.code,
+            item.name || '',
+            item.descripcion || '',
+            item.status === 'duplicate' ? '⚠️ REPETIDO' : '✓ Único'
+          ]);
+        }
+      }
+      SpreadsheetApp.flush();
+      return jsonResponse({ success: true, synced: incoming.length });
     }
 
     return jsonResponse({ error: 'Unknown action: ' + action });

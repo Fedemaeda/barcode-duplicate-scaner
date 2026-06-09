@@ -177,6 +177,7 @@
 
       <div class="modal-section">
         <h4>📊 Google Sheet</h4>
+        <button class="btn-primary" onclick="syncAllToSheet()" style="width:100%;margin-bottom:4px;">🔄 Sincronizar todo ahora</button>
         <button class="btn-primary" onclick="window.location.href='https://docs.google.com/spreadsheets/d/1Y18brymhRJ3KdE2-tHF8bjJxobzlvHjKDtGEdsvhMlE/edit'" style="width:100%;margin-bottom:4px;">📄 Abrir Google Sheet en PC</button>
       </div>
 
@@ -299,20 +300,22 @@
 
     // ---------- SHEET ----------
 
+    function sheetUrl(base, params) {
+      // Always add a random param to bust Google cache
+      params._cb = Date.now() + Math.random();
+      return base + '?' + new URLSearchParams(params).toString();
+    }
+
     async function findInSheet(code) {
       var url = config.scriptUrl;
       if (!url) return null;
       try {
-        var res = await fetch(url + '?action=find&code=' + encodeURIComponent(code), { method: 'GET', mode: 'cors' });
+        var res = await fetch(sheetUrl(url, { action: 'find', code: code }), { method: 'GET', cache: 'no-store' });
         if (!res.ok) return null;
         var data = await res.json();
-        if (data && data.error) {
-          showAlert('❌ Sheet: ' + data.error, 'warning');
-          return null;
-        }
+        if (data && data.error) { return null; }
         return data;
       } catch(e) {
-        showAlert('⛔ Error al consultar Sheet: ' + e.message, 'warning');
         return null;
       }
     }
@@ -320,20 +323,37 @@
     async function sendToSheet(scan) {
       var url = config.scriptUrl;
       if (!url) return;
-      var params = new URLSearchParams({
-        action: 'addScan',
-        code: scan.code,
-        nombre: scan.name || '',
-        descripcion: scan.descripcion || '',
-        estado: scan.status === 'duplicate' ? '⚠️ REPETIDO' : '✓ Único'
-      });
       try {
-        var res = await fetch(url + '?' + params.toString(), { method: 'GET', mode: 'cors' });
-        if (!res.ok) showAlert('⛔ Sheet error HTTP ' + res.status, 'warning');
-        updateSheetStatus(res.ok);
+        await fetch(sheetUrl(url, {
+          action: 'addScan',
+          code: scan.code,
+          nombre: scan.name || '',
+          descripcion: scan.descripcion || '',
+          estado: scan.status === 'duplicate' ? '⚠️ REPETIDO' : '✓ Único'
+        }), { method: 'GET', cache: 'no-store' });
+        updateSheetStatus(true);
       } catch(e) {
-        showAlert('⛔ Error de red al enviar al Sheet', 'warning');
         updateSheetStatus(false);
+      }
+    }
+
+    async function syncAllToSheet() {
+      var url = config.scriptUrl;
+      if (!url) { showAlert('⛔ No hay URL de Sheet configurada', 'warning'); return; }
+      if (scans.length === 0) { showAlert('No hay datos para sincronizar', 'warning'); return; }
+      try {
+        var res = await fetch(sheetUrl(url, {
+          action: 'syncAll',
+          scans: JSON.stringify(scans)
+        }), { method: 'GET', cache: 'no-store' });
+        if (res.ok) {
+          showAlert('✅ Sincronizados ' + scans.length + ' registros', 'success');
+          updateSheetStatus(true);
+        } else {
+          showAlert('⛔ Error sync: HTTP ' + res.status, 'warning');
+        }
+      } catch(e) {
+        showAlert('⛔ Error de red al sincronizar', 'warning');
       }
     }
 
@@ -373,7 +393,7 @@
       localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
       document.getElementById('connectionStatus').textContent = '🔌 Probando...';
       try {
-        const res = await fetch(url + '?action=getAll');
+        const res = await fetch(sheetUrl(url, { action: 'getAll' }), { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
           if (data && data.error) {
@@ -633,9 +653,9 @@
     startScanner();
     renderAllRows();
     if (config.scriptUrl) {
-      fetch(config.scriptUrl + '?action=getAll')
-        .then(r => r.ok && updateSheetStatus(true))
-        .catch(() => updateSheetStatus(false));
+      fetch(sheetUrl(config.scriptUrl, { action: 'getAll' }), { cache: 'no-store' })
+        .then(function(r) { if (r.ok) updateSheetStatus(true); })
+        .catch(function() { updateSheetStatus(false); });
     }
 
     if ('serviceWorker' in navigator) {

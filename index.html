@@ -5,409 +5,55 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>DupliScan</title>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0">
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <link rel="manifest" href="manifest.json">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f0f1a; color: #e0e0e0; min-height: 100vh; }
-    header { background: linear-gradient(135deg, #1a1a2e, #16213e); padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 10; }
-    .header-left { display: flex; align-items: center; gap: 10px; }
-    .header-left h1 { font-size: 18px; }
-    #scanCount { font-size: 14px; color: #888; }
-    .sheet-status { font-size: 11px; }
-    .sheet-status.connected { color: #52b788; }
-    .sheet-status.disconnected { color: #ff6b6b; }
-    #scanner-container { width: 100%; max-width: 500px; margin: 0 auto; background: #000; min-height: 220px; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f0f1a; color: #e0e0e0; min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
+    #scanner-container { width: 100%; max-width: 500px; background: #000; min-height: 300px; }
     #scanner-container video { width: 100%; display: block; }
-    #lastScan { text-align: center; padding: 10px; font-size: 15px; color: #aaa; background: #1a1a2e; margin-bottom: 6px; }
-    #lastScan .desc { display: block; font-size: 12px; color: #666; }
-    #alert { display: none; text-align: center; padding: 10px; font-weight: bold; font-size: 15px; margin: 6px 8px; border-radius: 8px; }
-    #alert.success { display: block; background: #1b4332; color: #52b788; }
-    #alert.warning { display: block; background: #4a3000; color: #ffd60a; }
-    #results-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; flex-wrap: wrap; gap: 8px; }
-    #results-header h2 { font-size: 16px; }
-    .header-buttons { display: flex; gap: 6px; flex-wrap: wrap; }
-    .header-buttons button { background: #2563eb; color: #fff; border: none; padding: 7px 14px; border-radius: 8px; font-size: 13px; cursor: pointer; white-space: nowrap; }
-    #table-wrapper { overflow-x: auto; padding: 0 6px; }
-    table { width: 100%; border-collapse: collapse; }
-    th { background: #1a1a2e; padding: 8px 6px; text-align: left; font-size: 12px; color: #666; position: sticky; top: 0; z-index: 1; white-space: nowrap; }
-    td { padding: 6px; border-bottom: 1px solid #1a1a2e; font-size: 13px; vertical-align: middle; }
-    .name-input, .desc-input { background: transparent; border: 1px solid #2a2a3e; border-radius: 4px; color: #e0e0e0; padding: 3px 5px; font-size: 12px; width: 100%; min-width: 80px; outline: none; }
-    .name-input:focus, .desc-input:focus { border-color: #2563eb; }
-    tr.duplicate { background: #2d1a1a; }
-    .status-icon { font-size: 16px; text-align: center; width: 28px; }
-    .status-duplicate { color: #ff4444; font-weight: bold; font-size: 12px; }
-    .status-unique { color: #4ade80; font-size: 12px; }
-    #actions { padding: 16px; text-align: center; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
-    #clearBtn { background: #3a1a1a; color: #ff6b6b; border: 1px solid #5a2a2a; padding: 10px 20px; border-radius: 8px; font-size: 14px; cursor: pointer; }
-    .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 100; justify-content: center; align-items: center; }
-    .modal.active { display: flex; }
-    .modal-content { background: #1a1a2e; border-radius: 16px; padding: 24px; width: 90%; max-width: 400px; }
-    .modal-content h3 { margin-bottom: 12px; font-size: 16px; }
-    .modal-content label { display: block; font-size: 13px; color: #888; margin-bottom: 4px; }
-    .modal-content input { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #333; background: #0f0f1a; color: #e0e0e0; font-size: 14px; margin-bottom: 12px; outline: none; }
-    .modal-content input:focus { border-color: #2563eb; }
-    .modal-content .code-display { color: #888; font-size: 13px; margin-bottom: 12px; word-break: break-all; }
-    .modal-buttons { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
-    .modal-buttons button { padding: 9px 18px; border-radius: 8px; border: none; font-size: 14px; cursor: pointer; }
-    .btn-primary { background: #2563eb; color: #fff; }
-    .btn-secondary { background: #333; color: #aaa; }
-    .modal-section { border-top: 1px solid #2a2a3e; padding-top: 16px; margin-top: 16px; }
-    .modal-section h4 { font-size: 14px; margin-bottom: 10px; color: #ccc; }
-    .status-text { font-size: 12px; color: #666; margin-top: 4px; }
-    @media (max-width: 480px) { .header-left h1 { font-size: 15px; } th { font-size: 11px; padding: 6px 4px; } td { font-size: 11px; padding: 4px; } .name-input, .desc-input { font-size: 11px; min-width: 60px; } }
+    #result { text-align: center; padding: 20px; font-size: 18px; font-weight: bold; min-height: 60px; color: #52b788; }
   </style>
 </head>
 <body>
-  <div id="app">
-    <header>
-      <div class="header-left">
-        <h1>&#x1F4F7; DupliScan</h1>
-        <span id="scanCount">0</span>
-      </div>
-      <span class="sheet-status disconnected" id="sheetStatus">&#x26A0;&#xFE0F; Sheet</span>
-    </header>
-    <div id="scanner-container"></div>
-    <div id="lastScan">Esperando c&oacute;digo...<span class="desc"></span></div>
-    <div id="alert"></div>
-    <div id="results-header">
-      <h2>Resultados</h2>
-      <div class="header-buttons">
-        <button onclick="exportDupExcel()">&#x1F4E5; Duplicados</button>
-        <button onclick="exportAllExcel()">&#x1F4E5; Todo</button>
-      </div>
-    </div>
-    <div id="table-wrapper">
-      <table id="resultsTable">
-        <thead>
-          <tr>
-            <th style="width:36px">#</th>
-            <th style="width:28px"></th>
-            <th>C&oacute;digo</th>
-            <th>Nombre</th>
-            <th>Descripci&oacute;n</th>
-            <th style="width:70px">Estado</th>
-          </tr>
-        </thead>
-        <tbody id="tableBody"></tbody>
-      </table>
-    </div>
-    <div id="actions">
-      <button id="clearBtn" onclick="clearAll()">&#x1F5D1;&#xFE0F; Limpiar pantalla</button>
-    </div>
-  </div>
-
-  <div class="modal" id="nameModal">
-    <div class="modal-content">
-      <h3>&#x1F4E6; Nuevo c&oacute;digo</h3>
-      <div class="code-display" id="modalCode"></div>
-      <div id="dupWarning" style="display:none;color:#ff6b6b;font-size:13px;margin-bottom:10px;">&#x26A0;&#xFE0F; Este c&oacute;digo ya fue escaneado</div>
-      <div id="savingIndicator" style="display:none;color:#52b788;font-size:13px;margin-bottom:10px;">&#x1F504; Guardando en el Sheet...</div>
-      <label>Nombre del producto</label>
-      <input type="text" id="modalNameInput" placeholder="..." autocomplete="off">
-      <label>Descripci&oacute;n</label>
-      <input type="text" id="modalDescInput" placeholder="Lote, estante..." autocomplete="off">
-      <div class="modal-buttons">
-        <button class="btn-secondary" onclick="skipName()">Omitir</button>
-        <button class="btn-primary" onclick="saveName()">Guardar</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="modal" id="configModal">
-    <div class="modal-content">
-      <h3>&#x2699;&#xFE0F; Configuraci&oacute;n</h3>
-      <label>URL del Google Apps Script</label>
-      <input type="url" id="scriptUrlInput" placeholder="https://script.google.com/macros/s/..." autocomplete="off">
-      <div style="display:flex;gap:8px;margin-bottom:16px;">
-        <button class="btn-primary" onclick="testConnection()">&#x1F50C; Probar</button>
-        <button class="btn-secondary" onclick="saveConfig()">&#x1F4BE; Guardar</button>
-      </div>
-      <div id="connectionStatus" class="status-text"></div>
-      <div style="margin-top:16px;">
-        <button class="btn-primary" onclick="refreshFromSheet()" style="width:100%;margin-bottom:4px;">&#x1F504; Recargar datos del Sheet</button>
-        <button class="btn-primary" onclick="window.location.href='https://docs.google.com/spreadsheets/d/1Y18brymhRJ3KdE2-tHF8bjJxobzlvHjKDtGEdsvhMlE/edit'" style="width:100%;margin-bottom:4px;">&#x1F4C4; Abrir Google Sheet</button>
-      </div>
-      <div class="modal-buttons" style="margin-top:16px;">
-        <button class="btn-secondary" onclick="closeConfig()">Cerrar</button>
-      </div>
-    </div>
-  </div>
+  <div id="scanner-container"></div>
+  <div id="result">Esperando c&oacute;digo...</div>
 
   <script>
-  var CK = 'dupliscan_config';
-  var OLD_SU = 'https://script.google.com/macros/s/AKfycbwY77awWK85PrYjayoIzNBIoUhaIMzMhrP2mJOc1fQEyib6rbvP5GbJFmjjjgrWgHUC/exec';
-  var SU = 'https://script.google.com/macros/s/AKfycbwl3pE-Vs7Rs0tvPnLAdc7_X1mhSLHx3oZNRs5kLStSVK4uqcCs6mnwd0WOLTSAlRTd/exec';
-  var cfg = JSON.parse(localStorage.getItem(CK));
-  if (!cfg || !cfg.scriptUrl || cfg.scriptUrl === OLD_SU) { cfg = { scriptUrl: SU }; localStorage.setItem(CK, JSON.stringify(cfg)); }
+  var SU = 'https://script.google.com/macros/s/AKfycbx8axoEdtPPiDOb7MHWud7IDUgFiApJ8zA0GUiODVFn3fz2U7sweQ4q84F8KovxXMU/exec';
+  var processing = false;
 
-  var scans = [];          // In-memory only. Sheet is source of truth.
-  var processing = false, pendingCode = null, qr = null;
-
-  function findScan(c) { for (var i = 0; i < scans.length; i++) { if (scans[i].code === c) return scans[i]; } return null; }
-  function codeInTable(c) { var t = document.getElementById('tableBody'); for (var i = 0; i < t.children.length; i++) { if (t.children[i].getAttribute('data-code') === c) return true; } return false; }
-  var CI = '\uD83D\uDCF7', CHK = '\u2705', WARN = '\u26A0\uFE0F';
-
-  // ── SCANNER ──────────────────────────────────────────────
   function startScanner() {
     try {
-      qr = new Html5Qrcode("scanner-container");
+      var qr = new Html5Qrcode("scanner-container");
       qr.start({ facingMode: "environment" }, { fps: 10, qrbox: function(vw, vh) {
         var m = Math.min(vw, vh) * 0.7; return { width: m, height: m * 0.5 };
-      }}, onScan, function(){});
+      }}, function(code) {
+        if (processing) return;
+        code = (code||'').trim();
+        if (!code) return;
+        processing = true;
+        try { navigator.vibrate(100); } catch(e) {}
+        document.getElementById('result').textContent = 'Enviando: ' + code;
+
+        // Send code to Sheet. Sheet does ALL the work.
+        fetch(SU + '?action=addScan&code=' + encodeURIComponent(code) + '&_=' + Date.now(), { cache: 'no-store' })
+          .then(function() {
+            document.getElementById('result').textContent = 'Enviado: ' + code;
+          })
+          .catch(function() {
+            document.getElementById('result').textContent = 'Error al enviar: ' + code;
+          })
+          .finally(function() {
+            setTimeout(function(){ processing = false; }, 1500);
+          });
+      }, function(){});
     } catch(e) {
-      document.getElementById('scanner-container').innerHTML = '<p style="color:#ff6b6b;padding:20px;text-align:center;">Error c\u00e1mara: ' + e.message + '</p>';
+      document.getElementById('result').textContent = 'Error c\u00e1mara: ' + e.message;
     }
   }
 
-  // ── SCAN PIPELINE ─────────────────────────────────────────
-  function onScan(t) {
-    if (processing) return;
-    var c = (t||'').trim();
-    if (!c) return;
-    processing = true;
-    try { navigator.vibrate(100); } catch(e) {}
-    flashLine(c);
-
-    pendingCode = c;
-    document.getElementById('modalCode').textContent = '\uD83D\uDCE6 ' + c;
-    document.getElementById('modalNameInput').value = '';
-    document.getElementById('modalDescInput').value = '';
-    document.getElementById('dupWarning').style.display = 'none';
-    document.getElementById('savingIndicator').style.display = 'none';
-    document.getElementById('nameModal').classList.add('active');
-    setTimeout(function(){document.getElementById('modalNameInput').focus();},300);
-
-    // Instant checks in-memory + DOM (covers timing edge cases)
-    if (findScan(c) || codeInTable(c)) {
-      document.getElementById('dupWarning').style.display = 'block';
-    }
-    sheetFind(c).then(function(d) {
-      if (d && d.found) {
-        document.getElementById('dupWarning').style.display = 'block';
-      }
-    });
-  }
-
-  function saveName() {
-    var n = document.getElementById('modalNameInput').value.trim();
-    var d = document.getElementById('modalDescInput').value.trim();
-    var c = pendingCode;
-    if (!c) { processing = false; return; }
-    pendingCode = null;
-
-    // Dual check: in-memory scans + rendered DOM (covers timing edge cases)
-    var localIsDup = !!findScan(c) || codeInTable(c);
-    if (localIsDup) {
-      showAlert(WARN + ' Repetido detectado localmente', 'warning');
-    }
-
-    // Show saving indicator, hide buttons
-    document.getElementById('savingIndicator').style.display = 'block';
-    document.querySelectorAll('#nameModal .modal-buttons button').forEach(function(b){b.disabled=true;});
-
-    // Write to sheet — server checks duplicates atomically; send estado as fallback
-    fetch(sheetUrl({ action: 'addScan', code: c, nombre: n, descripcion: d, estado: localIsDup ? (WARN + ' REPETIDO') : (CHK + ' Único') }), { cache: 'no-store' })
-      .then(function(r){ return r.ok ? r.json() : Promise.reject(); })
-      .then(function(resp){
-        if (resp && resp.error) throw new Error(resp.error);
-        var serverIsDup = resp.status === 'duplicate';
-        var isDup = localIsDup || serverIsDup;
-        var idx = scans.length + 1;
-        scans.push({ id: idx, code: c, name: n, descripcion: d, status: isDup ? 'duplicate' : 'unique' });
-        addRow(scans[scans.length-1]);
-        updateLast(c, n, d, isDup);
-        ss(true);
-      })
-      .catch(function(err){
-        showAlert('Error al guardar en el Sheet: ' + (err.message||err), 'warning');
-        ss(false);
-      })
-      .finally(function(){
-        document.getElementById('savingIndicator').style.display = 'none';
-        document.querySelectorAll('#nameModal .modal-buttons button').forEach(function(b){b.disabled=false;});
-        document.getElementById('nameModal').classList.remove('active');
-        processing = false;
-      });
-  }
-
-  function skipName() {
-    document.getElementById('modalNameInput').value = '';
-    document.getElementById('modalDescInput').value = '';
-    // Skip still writes to sheet with empty name
-    saveName();
-  }
-
-  document.getElementById('modalNameInput').addEventListener('keydown', function(e) {
-    if (e.key==='Enter') document.getElementById('modalDescInput').focus();
-  });
-  document.getElementById('modalDescInput').addEventListener('keydown', function(e) {
-    if (e.key==='Enter') saveName();
-  });
-
-  // ── TABLE ──────────────────────────────────────────────────
-  function addRow(s) {
-    var t = document.getElementById('tableBody');
-    var r = document.createElement('tr');
-    r.setAttribute('data-code', s.code);
-    var dup = s.status === 'duplicate';
-    r.className = dup ? 'duplicate' : 'unique';
-    var icon = dup ? WARN : CHK;
-    var label = dup ? (WARN + ' REPETIDO') : (CHK + ' \u00danico');
-    r.innerHTML = '<td>' + (s.id||'') + '</td><td class="status-icon">' + icon + '</td><td>' + esc(s.code) + '</td>' +
-      '<td>' + esc(s.name||'') + '</td>' +
-      '<td>' + esc(s.descripcion||'') + '</td>' +
-      '<td class="' + (dup ? 'status-duplicate' : 'status-unique') + '">' + label + '</td>';
-    t.insertBefore(r, t.firstChild);
-    cnt();
-  }
-
-  function renderAll() {
-    var t = document.getElementById('tableBody'); t.innerHTML = '';
-    for (var i = scans.length - 1; i >= 0; i--) { addRow(scans[i]); }
-    cnt();
-  }
-
-  function cnt() { document.getElementById('scanCount').textContent = scans.length; }
-
-  // ── UI HELPERS ────────────────────────────────────────────
-  function flashLine(c) {
-    var e = document.getElementById('lastScan');
-    e.innerHTML = CI + ' ' + esc(c) + '<span class="desc"></span>';
-    e.style.background = '#2563eb';
-    setTimeout(function(){e.style.background='#1a1a2e';}, 300);
-  }
-
-  function updateLast(c, n, d, dup) {
-    var e = document.getElementById('lastScan');
-    e.innerHTML = '\u00daltimo: ' + esc(c) + (n?' \u2014 '+esc(n):'') + '<span class="desc">' + esc(d||'') + '</span>';
-    e.style.color = dup ? '#ff6b6b' : '#52b788';
-  }
-
-  function showAlert(m, t) {
-    var e = document.getElementById('alert');
-    e.textContent = m; e.className = t;
-    clearTimeout(e._to); e._to = setTimeout(function(){e.style.display='none';},3000);
-  }
-
-  function esc(t) { var d=document.createElement('div'); d.textContent=t; return d.innerHTML; }
-
-  function clearAll() {
-    if (!confirm('\u00bfLimpiar la pantalla? (no borra el Sheet)')) return;
-    scans = []; renderAll();
-    document.getElementById('lastScan').innerHTML = 'Esperando c\u00f3digo...<span class="desc"></span>';
-  }
-
-  // ── SHEET ──────────────────────────────────────────────────
-  function sheetUrl(params) {
-    params._cb = Date.now();
-    return cfg.scriptUrl + '?' + new URLSearchParams(params).toString();
-  }
-
-  function sheetFind(code) {
-    if (!cfg.scriptUrl) return Promise.reject();
-    var controller = new AbortController();
-    var timeout = setTimeout(function(){ controller.abort(); }, 3000);
-    return fetch(sheetUrl({ action: 'find', code: code }), { cache: 'no-store', signal: controller.signal })
-      .then(function(r){ clearTimeout(timeout); return r.ok ? r.json() : Promise.reject(r.status); })
-      .then(function(d){ return d && d.error ? null : d; })
-      .catch(function() { return null; });
-  }
-
-  function refreshFromSheet() {
-    if (!cfg.scriptUrl) { showAlert('No hay URL', 'warning'); return; }
-    showAlert('Cargando datos del Sheet...', 'success');
-    fetch(sheetUrl({ action: 'getAll' }), { cache: 'no-store' })
-      .then(function(r){ return r.ok ? r.json() : Promise.reject(r.status); })
-      .then(function(rows){
-        scans = [];
-        if (rows && rows.length) {
-          for (var i = 0; i < rows.length; i++) {
-            scans.push({
-              id: rows[i].indice || (i + 1),
-              code: String(rows[i].codigo || ''),
-              name: rows[i].nombre || '',
-              descripcion: rows[i].descripcion || '',
-              status: (rows[i].estado && rows[i].estado.indexOf('REPETIDO') >= 0) ? 'duplicate' : 'unique'
-            });
-          }
-        }
-        renderAll();
-        ss(true);
-        showAlert('Cargados ' + scans.length + ' registros del Sheet', 'success');
-      })
-      .catch(function(e){
-        ss(false);
-        showAlert('Error al cargar del Sheet: ' + e, 'warning');
-      });
-  }
-
-  function ss(ok) {
-    var el = document.getElementById('sheetStatus');
-    el.textContent = ok ? (CHK + ' Sheet') : (WARN + ' Sheet');
-    el.className = 'sheet-status ' + (ok ? 'connected' : 'disconnected');
-  }
-
-  // ── EXCEL ──────────────────────────────────────────────────
-  function shareOrDownload(wb, name, msg) {
-    var wbout = XLSX.write(wb, {type:'array', bookType:'xlsx'});
-    var blob = new Blob([wbout], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
-    var file = new File([blob], name, {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
-    if (navigator.share && navigator.canShare && navigator.canShare({files:[file]})) {
-      navigator.share({files:[file], title:name}).catch(function(){});
-    } else {
-      var a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = name;
-      a.click();
-    }
-    showAlert(msg, 'success');
-  }
-
-  function exportDupExcel() {
-    var d = scans.filter(function(s){return s.status==='duplicate';});
-    if (d.length===0) { showAlert('No hay duplicados','warning'); return; }
-    var wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(d.map(function(s,i){return {'#':s.id||i+1,'C\u00f3digo':s.code,'Nombre':s.name||'','Descripci\u00f3n':s.descripcion||''};})), 'Duplicados');
-    shareOrDownload(wb, 'duplicados.xlsx', 'Exportados '+d.length+' duplicados');
-  }
-
-  function exportAllExcel() {
-    if (scans.length===0) { showAlert('No hay datos','warning'); return; }
-    var wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(scans.map(function(s,i){return {'#':s.id||i+1,'C\u00f3digo':s.code,'Nombre':s.name||'','Descripci\u00f3n':s.descripcion||'','Estado':s.status==='duplicate'?'REPETIDO':'\u00danico'};})), 'Escaneos');
-    shareOrDownload(wb, 'escaneos.xlsx', 'Exportados '+scans.length+' registros');
-  }
-
-  // ── CONFIG ─────────────────────────────────────────────────
-  function openConfig() {
-    document.getElementById('scriptUrlInput').value = cfg.scriptUrl||'';
-    document.getElementById('connectionStatus').textContent = '';
-    document.getElementById('configModal').classList.add('active');
-  }
-  function closeConfig() { document.getElementById('configModal').classList.remove('active'); }
-  function saveConfig() { cfg.scriptUrl=document.getElementById('scriptUrlInput').value.trim(); localStorage.setItem(CK,JSON.stringify(cfg)); showAlert('Guardado','success'); }
-  function testConnection() {
-    var u = document.getElementById('scriptUrlInput').value.trim();
-    if (!u) { document.getElementById('connectionStatus').textContent = 'Ingrese una URL'; return; }
-    cfg.scriptUrl = u; localStorage.setItem(CK, JSON.stringify(cfg));
-    document.getElementById('connectionStatus').textContent = 'Probando...';
-    fetch(sheetUrl({action:'getAll'}),{cache:'no-store'})
-      .then(function(r){return r.ok?r.json():Promise.reject(r.status);})
-      .then(function(d){
-        if (d&&d.error) { document.getElementById('connectionStatus').textContent = 'Error: '+d.error; return; }
-        ss(true);
-        document.getElementById('connectionStatus').textContent = 'Conectado! ' + (Array.isArray(d)?d.length+' registros':'');
-      }).catch(function(e){document.getElementById('connectionStatus').textContent = 'Error: '+e;});
-  }
-
-  // ── INIT ───────────────────────────────────────────────────
   startScanner();
-  refreshFromSheet();
-  if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(function(){}); }
   </script>
 </body>
 </html>

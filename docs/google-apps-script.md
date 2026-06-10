@@ -1,4 +1,4 @@
-# Google Apps Script — Conectar App con Google Sheet
+# Google Apps Script — DupliScan
 
 ## Columnas del Sheet
 
@@ -22,8 +22,6 @@ function doGet(e) {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sheet = ss.getActiveSheet();
 
-    // ---- HEADER CHECK (ensure first row has column names) ----
-
     function ensureHeaders() {
       var data = sheet.getDataRange().getValues();
       if (data.length === 0 || String(data[0][0]).trim() !== 'Índice') {
@@ -33,7 +31,7 @@ function doGet(e) {
       }
     }
 
-    // ---- READ ----
+    // ── READ ──────────────────────────────────────────────
 
     if (action === 'find') {
       var code = (params.code || '').trim();
@@ -55,7 +53,18 @@ function doGet(e) {
       return json(rows);
     }
 
-    // ---- WRITE (lock, check duplicates server-side) ----
+    // ── CLEAR (delete all data rows, keep header) ─────────
+
+    if (action === 'clear') {
+      var data = sheet.getDataRange().getValues();
+      if (data.length > 1) {
+        sheet.deleteRows(2, data.length - 1);
+        SpreadsheetApp.flush();
+      }
+      return json({ success: true, cleared: data.length - 1 });
+    }
+
+    // ── WRITE (lock + duplicate detection) ────────────────
 
     if (action === 'addScan') {
       var code = (params.code || '').trim();
@@ -68,7 +77,8 @@ function doGet(e) {
       try {
         ensureHeaders();
         var data = sheet.getDataRange().getValues();
-        // Check if code already exists in sheet (server-side duplicate detection)
+
+        // Server-side duplicate detection
         var isDuplicate = false;
         for (var i = 1; i < data.length; i++) {
           if (data[i][1] && String(data[i][1]).trim() === code) {
@@ -76,6 +86,7 @@ function doGet(e) {
             break;
           }
         }
+
         var status = isDuplicate ? '⚠️ REPETIDO' : '✓ Único';
         sheet.appendRow([data.length, code, params.nombre || '', params.descripcion || '', status]);
         SpreadsheetApp.flush();

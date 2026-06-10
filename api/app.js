@@ -38,12 +38,16 @@ module.exports = async function handler(req, res) {
 
       const now = new Date().toISOString();
       const scanId = await kv.incr('scan:counter');
-      const isDuplicate = (await kv.sadd('codes', code)) === 0;
+
+      const existingCodeScans = await kv.scard(`code_to_scan_ids:${code}`);
+      const isDuplicate = existingCodeScans > 0;
+
       const status = isDuplicate ? '⚠️ REPETIDO' : '✓ Único';
       const scan = { id: String(scanId), code, name: '', desc: '', status, scanned_at: now, updated_at: now };
 
       await kv.hset(`scan:${scanId}`, scan);
       await kv.lpush('scan:ids', String(scanId));
+      await kv.sadd(`code_to_scan_ids:${code}`, String(scanId)); // Add scanId to the set of scans for this code
       return res.json({ success: true, status: isDuplicate ? 'duplicate' : 'unique', id: String(scanId), scan });
     }
 
@@ -60,8 +64,20 @@ module.exports = async function handler(req, res) {
 
     if (action === 'delete') {
       if (!id) return res.status(400).json({ error: 'Missing id' });
+      
+      const scanToDelete = await kv.hgetall(`scan:${id}`);
+      if (!scanToDelete) return res.status(404).json({ error: 'Scan not found' });
+
       await kv.del(`scan:${id}`);
       await kv.lrem('scan:ids', 0, id);
+      await kv.srem(`code_to_scan_ids:${scanToDelete.code}`, id); // Remove from code_to_scan_ids set
+
+      // If no more scans for this code, remove the code_to_scan_ids set
+      const remainingScansForCode = await kv.scard(`code_to_scan_ids:${scanToDelete.code}`);
+      if (remainingScansForCode === 0) {
+        await kv.del(`code_to_scan_ids:${scanToDelete.code}`);
+      }
+
       return res.json({ success: true });
     }
 

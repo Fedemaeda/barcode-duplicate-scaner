@@ -111,6 +111,9 @@ var TOKEN = localStorage.getItem('token');
 var QR = null;
 var scanning = false;
 var pollTimer = null;
+var idleTimer = null;
+var isIdle = false;
+var IDLE_TIMEOUT = 10000;
 
 document.getElementById('login-form').addEventListener('submit', function(e) {
   e.preventDefault();
@@ -127,8 +130,9 @@ function logout() { TOKEN = null; localStorage.removeItem('token'); stopScanner(
 function showDashboard() { document.getElementById('login-screen').classList.add('hidden'); document.getElementById('dashboard').classList.remove('hidden'); loadProducts(); startScanner(); startPolling(); }
 function startScanner() { stopScanner(); try { QR = new Html5Qrcode('reader'); QR.start({ facingMode: 'environment' }, { fps: 10, qrbox: function(vw, vh) { var m = Math.min(vw, vh) * 0.7; return { width: m, height: m * 0.5 }; }}, onScan, function(){}); } catch(e){} }
 function stopScanner() { if (QR) { try { QR.stop(); QR.clear(); } catch(e){} QR = null; } }
-function startPolling() { stopPolling(); pollTimer = setInterval(function(){ if (!document.querySelector('.edit-input')) loadProducts(); }, 3000); document.addEventListener('visibilitychange', onFocus); }
-function stopPolling() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } document.removeEventListener('visibilitychange', onFocus); }
+function startPolling() { stopPolling(); resetIdleTimer(); pollTimer = setInterval(function(){ if (isIdle && !document.querySelector('.edit-input')) loadProducts(); }, 3000); var envs = ['mousemove', 'keydown', 'scroll', 'click', 'touchstart']; envs.forEach(function(evt) { document.addEventListener(evt, resetIdleTimer); }); document.addEventListener('visibilitychange', onFocus); }
+function stopPolling() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } if (idleTimer) { clearTimeout(idleTimer); idleTimer = null; } var envs = ['mousemove', 'keydown', 'scroll', 'click', 'touchstart']; envs.forEach(function(evt) { document.removeEventListener(evt, resetIdleTimer); }); document.removeEventListener('visibilitychange', onFocus); }
+function resetIdleTimer() { isIdle = false; clearTimeout(idleTimer); idleTimer = setTimeout(function() { isIdle = true; if (!document.querySelector('.edit-input')) loadProducts(); }, IDLE_TIMEOUT); }
 function onFocus() { if (document.visibilityState === 'visible' && !document.querySelector('.edit-input')) loadProducts(); }
 function onScan(code) {
   if (scanning) return; code = (code||'').trim(); if (!code) return; scanning = true;

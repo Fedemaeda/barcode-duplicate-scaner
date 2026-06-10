@@ -1,5 +1,5 @@
-// Service Worker v6 — limpia caches viejos y NO cachea nada
-var CACHE_NAME = 'dupliscan-v7';
+// Service Worker v8 — limpia caches viejos y NO cachea nada
+var CACHE_NAME = 'dupliscan-v8';
 
 self.addEventListener('install', function(e) {
   self.skipWaiting();

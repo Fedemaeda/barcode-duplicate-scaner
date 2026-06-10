@@ -12,7 +12,7 @@ module.exports = async function handler(req, res) {
   if (!sessionUser) return res.status(401).json({ error: 'Sesión expirada' });
 
   try {
-    const ids = await kv.zrevrange('scan:ids', 0, -1);
+    const ids = await kv.lrange('scan:ids', 0, -1);
     const products = [];
     if (ids.length) {
       const pipe = kv.pipeline();

@@ -25,7 +25,7 @@ module.exports = async function handler(req, res) {
     if (!sessionUser) return res.status(401).json({ error: 'Sesión expirada' });
 
     if (action === 'list') {
-      const ids = await kv.zrevrange('scan:ids', 0, -1);
+      const ids = await kv.lrange('scan:ids', 0, -1);
       if (!ids.length) return res.json([]);
       const pipe = kv.pipeline();
       ids.forEach(id => pipe.hgetall(`scan:${id}`));
@@ -43,7 +43,7 @@ module.exports = async function handler(req, res) {
       const scan = { id: String(scanId), code, name: '', desc: '', status, scanned_at: now, updated_at: now };
 
       await kv.hset(`scan:${scanId}`, scan);
-      await kv.zadd('scan:ids', Date.now(), String(scanId));
+      await kv.lpush('scan:ids', String(scanId));
       return res.json({ success: true, status: isDuplicate ? 'duplicate' : 'unique', id: String(scanId), scan });
     }
 
@@ -61,7 +61,7 @@ module.exports = async function handler(req, res) {
     if (action === 'delete') {
       if (!id) return res.status(400).json({ error: 'Missing id' });
       await kv.del(`scan:${id}`);
-      await kv.zrem('scan:ids', id);
+      await kv.lrem('scan:ids', 0, id);
       return res.json({ success: true });
     }
 

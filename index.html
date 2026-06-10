@@ -7,6 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <link rel="manifest" href="manifest.json">
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -85,6 +86,8 @@
   <div class="header">
     <h1>DupliScan</h1>
     <div class="header-actions">
+      <button class="btn-icon export" onclick="openImport()">📤 Importar Excel</button>
+      <input type="file" id="import-file" class="hidden" accept=".xlsx,.xls" onchange="handleImportFile(this.files[0])">
       <button class="btn-icon export" onclick="downloadXLSX()">📥 XLSX</button>
       <button class="btn-icon export" onclick="downloadCSV()">📥 CSV</button>
       <button class="btn-icon danger" onclick="logout()">Salir</button>
@@ -158,12 +161,13 @@ function renderTable(products) {
   var container = document.getElementById('table-body');
   document.getElementById('count-badge').textContent = products.length;
   if (!products.length) { container.innerHTML = '<div class="empty-state"><div style="font-size: 40px;">📦</div><p>Escaneá tu primer producto</p></div>'; return; }
-    var h = '<table><thead><tr><th>Código</th><th>Nombre</th><th>Descripción</th><th>Estado</th><th>Fecha</th><th></th></tr></thead><tbody>';
+    var h = '<table><thead><tr><th>Código</th><th>Nombre</th><th>Descripción</th><th>Cantidad</th><th>Estado</th><th>Fecha</th><th></th></tr></thead><tbody>';
   products.forEach(function(p) {
     var statusClass = (p.status||'').indexOf('REPETIDO') >= 0 ? 'status-dup' : 'status-uniq';
     h += '<tr><td class="code-cell" title="'+p.code+'">'+p.code+'</td>';
     h += '<td><span class="editable" onclick="editField(this,\''+p.id+'\',\'name\')" data-id="'+p.id+'" data-field="name">'+esc(p.name)+'</span></td>';
     h += '<td><span class="editable" onclick="editField(this,\''+p.id+'\',\'desc\')" data-id="'+p.id+'" data-field="desc">'+esc(p.desc)+'</span></td>';
+    h += '<td>'+esc(p.qty || '')+'</td>';
     h += '<td class="'+statusClass+'">'+esc(p.status || '')+'</td>';
     h += '<td class="date-cell">'+formatDate(p.scanned_at)+'</td>';
     h += '<td class="actions-cell"><button class="btn-delete" onclick="deleteProduct(\''+p.id+'\')">✕</button></td></tr>';
@@ -197,6 +201,37 @@ function editField(el, id, field) {
 function deleteProduct(id) { if (!confirm('¿Eliminar este producto?')) return; fetch('/api/app',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',id,token:TOKEN})}).then(r=>r.json()).then(function(d){if(d.success)loadProducts();}); }
 function downloadXLSX() { window.open('/api/export?token='+TOKEN+'&format=xlsx&_='+Date.now(), '_blank'); }
 function downloadCSV() { window.open('/api/export?token='+TOKEN+'&format=csv&_='+Date.now(), '_blank'); }
+function openImport() { document.getElementById('import-file').click(); }
+function excelDateToIso(value) {
+  if (!value) return '';
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value === 'number') return new Date((value - 25569) * 86400 * 1000).toISOString();
+  var parsed = new Date(value);
+  return isNaN(parsed.getTime()) ? '' : parsed.toISOString();
+}
+function handleImportFile(file) {
+  if (!file) return;
+  if (!confirm('Esto reemplazará todos los productos actuales. ¿Continuar?')) { document.getElementById('import-file').value = ''; return; }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var workbook = XLSX.read(e.target.result, { type: 'array', cellDates: true });
+      var sheet = workbook.Sheets[workbook.SheetNames[0]];
+      var data = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+      var rows = data.map(function(row) {
+        return { code: String(row['Código de barras'] || '').trim(), name: row.Nombre || '', desc: row['Descripción'] || '', qty: row.Cantidad || '', scanned_at: excelDateToIso(row.Fecha) };
+      }).filter(function(row) { return row.code; });
+      if (!rows.length) { showToast('No se encontraron códigos en el Excel', 'duplicate'); return; }
+      fetch('/api/app', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'import', token: TOKEN, rows: rows }) })
+      .then(r => r.json()).then(function(d) {
+        if (d.success) { showToast('Excel importado: ' + d.count + ' productos', 'success'); loadProducts(); }
+        else { showToast(d.error || 'Error al importar Excel', 'duplicate'); }
+      }).catch(function(){ showToast('Error al importar Excel', 'duplicate'); });
+    } catch (err) { showToast('Excel inválido', 'duplicate'); }
+    document.getElementById('import-file').value = '';
+  };
+  reader.readAsArrayBuffer(file);
+}
 function showToast(msg, cls) { var el = document.getElementById('toast'); el.textContent = msg; el.className = 'toast '+(cls||'')+' show'; clearTimeout(el._timer); el._timer = setTimeout(function(){el.classList.remove('show');},3000); }
 if (TOKEN) { showDashboard(); }
 </script>

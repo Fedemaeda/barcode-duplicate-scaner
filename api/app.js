@@ -7,7 +7,7 @@ const PASS = 'sofiyjuli';
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
 
-  const { action, token, code, id, name, desc, user, pass } = req.body || {};
+  const { action, token, code, id, name, desc, rows, user, pass } = req.body || {};
   if (!action) return res.status(400).json({ error: 'Missing action' });
 
   try {
@@ -33,6 +33,53 @@ module.exports = async function handler(req, res) {
       return res.json(scans);
     }
 
+    if (action === 'import') {
+      if (!Array.isArray(rows)) return res.status(400).json({ error: 'Rows required' });
+
+      const existingIds = await kv.lrange('scan:ids', 0, -1);
+      const existingScans = [];
+      if (existingIds.length) {
+        const pipe = kv.pipeline();
+        existingIds.forEach(id => pipe.hgetall(`scan:${id}`));
+        (await pipe.exec()).filter(Boolean).forEach(scan => existingScans.push(scan));
+      }
+
+      const oldCodes = Array.from(new Set(existingScans.map(scan => scan.code).filter(Boolean)));
+      for (const scanId of existingIds) await kv.del(`scan:${scanId}`);
+      for (const oldCode of oldCodes) await kv.del(`code_to_scan_ids:${oldCode}`);
+      await kv.del('scan:ids');
+
+      const seenCodes = new Set();
+      let imported = 0;
+      for (const row of rows) {
+        const rowCode = String(row.code || '').trim();
+        if (!rowCode) continue;
+
+        const scanId = String(await kv.incr('scan:counter'));
+        const now = new Date().toISOString();
+        const isDuplicate = seenCodes.has(rowCode);
+        const status = isDuplicate ? '⚠️ REPETIDO' : '✓ Único';
+        const scan = {
+          id: scanId,
+          code: rowCode,
+          name: String(row.name || ''),
+          desc: String(row.desc || ''),
+          qty: row.qty === undefined || row.qty === null ? '' : String(row.qty),
+          status,
+          scanned_at: row.scanned_at || now,
+          updated_at: now,
+        };
+
+        await kv.hset(`scan:${scanId}`, scan);
+        await kv.lpush('scan:ids', scanId);
+        await kv.sadd(`code_to_scan_ids:${rowCode}`, scanId);
+        seenCodes.add(rowCode);
+        imported++;
+      }
+
+      return res.json({ success: true, count: imported });
+    }
+
     if (action === 'scan') {
       if (!code) return res.status(400).json({ error: 'Missing code' });
 
@@ -43,7 +90,7 @@ module.exports = async function handler(req, res) {
       const isDuplicate = existingCodeScans > 0;
 
       const status = isDuplicate ? '⚠️ REPETIDO' : '✓ Único';
-      const scan = { id: String(scanId), code, name: '', desc: '', status, scanned_at: now, updated_at: now };
+      const scan = { id: String(scanId), code, name: '', desc: '', qty: '', status, scanned_at: now, updated_at: now };
 
       await kv.hset(`scan:${scanId}`, scan);
       await kv.lpush('scan:ids', String(scanId));

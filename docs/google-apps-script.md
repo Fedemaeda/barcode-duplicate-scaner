@@ -78,10 +78,12 @@ function doGet(e) {
         ensureHeaders();
         var data = sheet.getDataRange().getValues();
 
-        // Server-side duplicate detection
+        // Server-side duplicate detection (compare as text)
         var isDuplicate = false;
+        var codeStr = String(code).trim();
         for (var i = 1; i < data.length; i++) {
-          if (data[i][1] && String(data[i][1]).trim() === code) {
+          var cellStr = String(data[i][1] || '').trim();
+          if (cellStr && cellStr === codeStr) {
             isDuplicate = true;
             break;
           }

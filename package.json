@@ -1,0 +1,8 @@
+{
+  "name": "scanspot",
+  "private": true,
+  "dependencies": {
+    "@vercel/kv": "^1.0.1",
+    "xlsx": "^0.18.5"
+  }
+}

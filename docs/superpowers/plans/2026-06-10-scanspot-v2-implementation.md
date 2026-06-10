@@ -1,3 +1,224 @@
+# DupliScan v2 Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Rebuild DupliScan as a full web app with persistent storage (Vercel KV), login, editable products, and XLSX/CSV export.
+
+**Architecture:** Single-page frontend + Vercel serverless functions + Vercel KV (Redis). Eliminates all Google dependencies.
+
+**Tech Stack:** Vanilla HTML/CSS/JS, Vercel KV, xlsx (SheetJS), Node.js 18+
+
+---
+
+### Task 1: Setup package.json and dependencies
+
+**Files:**
+- Modify: `package.json`
+
+- [ ] **Step 1: Write package.json**
+
+```json
+{
+  "name": "scanspot",
+  "private": true,
+  "dependencies": {
+    "@vercel/kv": "^1.0.1",
+    "xlsx": "^0.18.5"
+  }
+}
+```
+
+- [ ] **Step 2: Install dependencies**
+
+Run: `npm install`
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add package.json package-lock.json
+git commit -m "chore: add @vercel/kv and xlsx dependencies"
+```
+
+---
+
+### Task 2: Create api/app.js (main API handler)
+
+**Files:**
+- Create: `api/app.js`
+- Remove: `api/scan.js`
+- Remove: `api/data.js`
+
+- [ ] **Step 1: Write api/app.js**
+
+This handles: login, scan, list, update, delete. All via POST with `req.body.action`.
+
+```javascript
+import { kv } from '@vercel/kv';
+import crypto from 'crypto';
+
+const USER = 'elimaeda';
+const PASS = 'sofiyjuli';
+
+export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+
+  const { action, token, code, id, name, desc, user, pass } = req.body || {};
+  if (!action) return res.status(400).json({ error: 'Missing action' });
+
+  try {
+    // ── LOGIN ──────────────────────────────────────────────
+    if (action === 'login') {
+      if (user !== USER || pass !== PASS) {
+        return res.status(401).json({ error: 'Credenciales inválidas' });
+      }
+      const sessionToken = crypto.randomBytes(24).toString('hex');
+      await kv.set(`token:${sessionToken}`, USER, { ex: 86400 });
+      return res.json({ token: sessionToken });
+    }
+
+    // ── AUTH CHECK ─────────────────────────────────────────
+    if (!token) return res.status(401).json({ error: 'Token requerido' });
+    const sessionUser = await kv.get(`token:${token}`);
+    if (!sessionUser) return res.status(401).json({ error: 'Sesión expirada' });
+
+    // ── LIST ────────────────────────────────────────────────
+    if (action === 'list') {
+      const ids = await kv.smembers('product:ids');
+      if (!ids.length) return res.json([]);
+      const pipe = kv.pipeline();
+      ids.forEach(id => pipe.hgetall(`product:${id}`));
+      const products = (await pipe.exec()).filter(Boolean);
+      return res.json(products.sort((a, b) => (b.scanned_at || '').localeCompare(a.scanned_at || '')));
+    }
+
+    // ── SCAN ────────────────────────────────────────────────
+    if (action === 'scan') {
+      if (!code) return res.status(400).json({ error: 'Missing code' });
+      const existing = await kv.hgetall(`product:${code}`);
+      if (existing) {
+        return res.json({ success: true, status: 'duplicate', id: code, product: existing });
+      }
+      const now = new Date().toISOString();
+      const product = { id: code, code, name: '', desc: '', scanned_at: now, updated_at: now };
+      await kv.hset(`product:${code}`, product);
+      await kv.sadd('product:ids', code);
+      return res.json({ success: true, status: 'unique', id: code, product });
+    }
+
+    // ── UPDATE ──────────────────────────────────────────────
+    if (action === 'update') {
+      if (!id) return res.status(400).json({ error: 'Missing id' });
+      const existing = await kv.hgetall(`product:${id}`);
+      if (!existing) return res.status(404).json({ error: 'Product not found' });
+      if (name !== undefined) existing.name = name;
+      if (desc !== undefined) existing.desc = desc;
+      existing.updated_at = new Date().toISOString();
+      await kv.hset(`product:${id}`, existing);
+      return res.json({ success: true });
+    }
+
+    // ── DELETE ──────────────────────────────────────────────
+    if (action === 'delete') {
+      if (!id) return res.status(400).json({ error: 'Missing id' });
+      await kv.del(`product:${id}`);
+      await kv.srem('product:ids', id);
+      return res.json({ success: true });
+    }
+
+    return res.status(400).json({ error: 'Unknown action' });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+}
+```
+
+- [ ] **Step 2: Delete old API files**
+
+Remove `api/scan.js` and `api/data.js` since `api/app.js` replaces them.
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add api/app.js
+git rm api/scan.js api/data.js
+git commit -m "feat: add unified API handler with auth and CRUD"
+```
+
+---
+
+### Task 3: Create api/export.js (XLSX and CSV download)
+
+**Files:**
+- Create: `api/export.js`
+
+- [ ] **Step 1: Write api/export.js**
+
+```javascript
+import { kv } from '@vercel/kv';
+import xlsx from 'xlsx';
+
+export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+
+  const token = req.query.token;
+  const format = req.query.format || 'xlsx';
+
+  if (!token) return res.status(401).json({ error: 'Token requerido' });
+  const sessionUser = await kv.get(`token:${token}`);
+  if (!sessionUser) return res.status(401).json({ error: 'Sesión expirada' });
+
+  try {
+    const ids = await kv.smembers('product:ids');
+    const products = [];
+    if (ids.length) {
+      const pipe = kv.pipeline();
+      ids.forEach(id => pipe.hgetall(`product:${id}`));
+      const results = await pipe.exec();
+      results.filter(Boolean).forEach(p => {
+        products.push({ Código: p.code, Nombre: p.name || '', Descripción: p.desc || '', Escaneado: p.scanned_at || '', Actualizado: p.updated_at || '' });
+      });
+    }
+
+    const ws = xlsx.utils.json_to_sheet(products);
+    const wb = xlsx.utils.book_new();
+    xlsx.utils.book_append_sheet(wb, ws, 'Productos');
+
+    if (format === 'csv') {
+      const csv = xlsx.utils.sheet_to_csv(ws);
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', 'attachment; filename=productos.csv');
+      return res.send(csv);
+    }
+
+    const buf = xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename=productos.xlsx');
+    res.send(buf);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+```
+
+- [ ] **Step 2: Commit**
+
+```bash
+git add api/export.js
+git commit -m "feat: add XLSX/CSV export endpoint"
+```
+
+---
+
+### Task 4: Write the frontend (index.html)
+
+**Files:**
+- Modify: `index.html`
+
+- [ ] **Step 1: Write index.html**
+
+Full SPA with login, scanner, product table, inline editing, export buttons. Pastel aesthetic.
+
+```html
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -51,8 +272,6 @@
     td .edit-input { width: 100%; padding: 4px 8px; border: 2px solid #b8a9ff; border-radius: 8px; font-size: 14px; font-family: inherit; color: #4a4a6a; outline: none; background: white; }
     .code-cell { font-family: 'Courier New', monospace; font-size: 13px; color: #8888aa; font-weight: 500; max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
     .date-cell { font-size: 12px; color: #b0b0c8; white-space: nowrap; }
-    .status-uniq { font-size: 13px; color: #6abf8a; font-weight: 500; white-space: nowrap; }
-    .status-dup { font-size: 13px; color: #f0a070; font-weight: 500; white-space: nowrap; }
     .actions-cell { display: flex; gap: 4px; }
     .btn-delete { padding: 4px 8px; border: none; border-radius: 6px; cursor: pointer; background: #fff0f0; color: #ff8a8a; font-size: 16px; transition: all 0.2s; }
     .btn-delete:hover { background: #ffe0e0; }
@@ -133,7 +352,7 @@ function onScan(code) {
   fetch('/api/app', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'scan', code, token: TOKEN }) })
   .then(r => r.json()).then(d => {
     if (d.success) {
-      if (d.status === 'duplicate') { setScanStatus('⚠️ Ya existe: ' + code, 'duplicate'); showToast('⚠️ Código ' + code + ' ya está registrado', 'duplicate'); }
+      if (d.status === 'duplicate') { setScanStatus('⚠️ Ya existe: ' + code, 'duplicate'); showToast('⚠️ "' + (d.product.name || code) + '" ya estaba registrado', 'duplicate'); }
       else { setScanStatus('✅ ' + code, 'success'); }
       loadProducts();
     } else { setScanStatus('Error: ' + code, 'error'); }
@@ -150,13 +369,11 @@ function renderTable(products) {
   var container = document.getElementById('table-body');
   document.getElementById('count-badge').textContent = products.length;
   if (!products.length) { container.innerHTML = '<div class="empty-state"><div style="font-size: 40px;">📦</div><p>Escaneá tu primer producto</p></div>'; return; }
-    var h = '<table><thead><tr><th>Código</th><th>Nombre</th><th>Descripción</th><th>Estado</th><th>Fecha</th><th></th></tr></thead><tbody>';
+  var h = '<table><thead><tr><th>Código</th><th>Nombre</th><th>Descripción</th><th>Fecha</th><th></th></tr></thead><tbody>';
   products.forEach(function(p) {
-    var statusClass = (p.status||'').indexOf('REPETIDO') >= 0 ? 'status-dup' : 'status-uniq';
     h += '<tr><td class="code-cell" title="'+p.code+'">'+p.code+'</td>';
     h += '<td><span class="editable" onclick="editField(this,\''+p.id+'\',\'name\')" data-id="'+p.id+'" data-field="name">'+esc(p.name)+'</span></td>';
     h += '<td><span class="editable" onclick="editField(this,\''+p.id+'\',\'desc\')" data-id="'+p.id+'" data-field="desc">'+esc(p.desc)+'</span></td>';
-    h += '<td class="'+statusClass+'">'+esc(p.status || '')+'</td>';
     h += '<td class="date-cell">'+formatDate(p.scanned_at)+'</td>';
     h += '<td class="actions-cell"><button class="btn-delete" onclick="deleteProduct(\''+p.id+'\')">✕</button></td></tr>';
   });
@@ -194,3 +411,88 @@ if (TOKEN) { showDashboard(); }
 </script>
 </body>
 </html>
+```
+
+- [ ] **Step 2: Commit**
+
+```bash
+git add index.html
+git commit -m "feat: complete frontend with login, scanner, table, editing, export"
+```
+
+---
+
+### Task 5: Update manifest.json and sw.js
+
+**Files:**
+- Modify: `manifest.json`
+- Modify: `sw.js`
+
+- [ ] **Step 1: Update manifest.json**
+
+```json
+{
+  "name": "DupliScan - Gestión de Productos",
+  "short_name": "DupliScan",
+  "description": "Escanea códigos, gestiona productos, exporta a Excel",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#f8f0ff",
+  "theme_color": "#b8a9ff",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23b8a9ff'/%3E%3Ctext x='50' y='68' text-anchor='middle' font-size='55'%3E📦%3C/text%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    }
+  ]
+}
+```
+
+- [ ] **Step 2: Update sw.js cache version**
+
+Change line 2: `var CACHE_NAME = 'dupliscan-v6';`
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add manifest.json sw.js
+git commit -m "chore: update manifest and sw for v2"
+```
+
+---
+
+### Task 6: Deploy and test
+
+- [ ] **Step 1: Deploy to Vercel**
+
+Run: `vercel --prod --yes`
+
+- [ ] **Step 2: Test API**
+
+```bash
+# Login
+curl -s -X POST "https://scanspot.vercel.app/api/app" -H "Content-Type: application/json" -d '{"action":"login","user":"elimaeda","pass":"sofiyjuli"}'
+# Expected: {"token":"..."}
+```
+
+- [ ] **Step 3: Test frontend**
+
+Open https://scanspot.vercel.app, login with elimaeda/sofiyjuli, verify scanner + table + edit + export.
+
+---
+
+## Spec Coverage
+
+| Spec Requirement | Task |
+|-----------------|------|
+| Login (elimaeda/sofiyjuli) | Task 2 (app.js) + Task 4 (frontend) |
+| Persistent storage (Vercel KV) | Task 1 (@vercel/kv) |
+| Scan barcode | Task 4 (html5-qrcode) + Task 2 (scan action) |
+| Duplicate detection | Task 2 (checks existing before insert) |
+| Editable name/description | Task 4 (inline edit) + Task 2 (update action) |
+| Delete products | Task 4 (delete button) + Task 2 (delete action) |
+| Export XLSX | Task 3 (api/export.js) + Task 4 (download button) |
+| Export CSV | Task 3 (api/export.js) + Task 4 (download button) |
+| Pastel suave design | Task 4 (CSS: gradient, pastel colors) |
+| Mobile + Desktop | Task 4 (responsive CSS) |

@@ -13,7 +13,12 @@
 3. Borrá todo y pegá este código:
 
 ```javascript
-function doGet(e) {
+// Both GET and POST call the same handler.
+// POST avoids GAS redirect issues with browser fetch().
+function doGet(e)  { return handleRequest(e); }
+function doPost(e) { return handleRequest(e); }
+
+function handleRequest(e) {
   try {
     if (!e || !e.parameter) return json({ error: 'No event data' });
 

@@ -50,6 +50,7 @@ module.exports = async function handler(req, res) {
       await kv.del('scan:ids');
 
       const seenCodes = new Set();
+      const firstByCode = new Map();
       let imported = 0;
       for (const row of rows) {
         const rowCode = String(row.code || '').trim();
@@ -59,6 +60,7 @@ module.exports = async function handler(req, res) {
         const now = new Date().toISOString();
         const isDuplicate = seenCodes.has(rowCode);
         const status = isDuplicate ? '⚠️ REPETIDO' : '✓ Único';
+        const firstMatch = firstByCode.get(rowCode);
         const scan = {
           id: scanId,
           code: rowCode,
@@ -66,6 +68,8 @@ module.exports = async function handler(req, res) {
           desc: String(row.desc || ''),
           qty: row.qty === undefined || row.qty === null ? '' : String(row.qty),
           status,
+          match_ids: firstMatch ? firstMatch.id : '',
+          match_text: firstMatch ? `#${firstMatch.id} - ${firstMatch.name || firstMatch.code}` : '',
           scanned_at: row.scanned_at || now,
           updated_at: now,
         };
@@ -74,6 +78,7 @@ module.exports = async function handler(req, res) {
         await kv.lpush('scan:ids', scanId);
         await kv.sadd(`code_to_scan_ids:${rowCode}`, scanId);
         seenCodes.add(rowCode);
+        if (!firstByCode.has(rowCode)) firstByCode.set(rowCode, scan);
         imported++;
       }
 
@@ -88,14 +93,22 @@ module.exports = async function handler(req, res) {
 
       const existingCodeScans = await kv.scard(`code_to_scan_ids:${code}`);
       const isDuplicate = existingCodeScans > 0;
+      const matchIds = isDuplicate ? await kv.smembers(`code_to_scan_ids:${code}`) : [];
+      const matches = [];
+      if (matchIds.length) {
+        const pipe = kv.pipeline();
+        matchIds.forEach(matchId => pipe.hgetall(`scan:${matchId}`));
+        (await pipe.exec()).filter(Boolean).forEach(match => matches.push(match));
+      }
 
       const status = isDuplicate ? '⚠️ REPETIDO' : '✓ Único';
-      const scan = { id: String(scanId), code, name: '', desc: '', qty: '', status, scanned_at: now, updated_at: now };
+      const matchText = matches.map(match => `#${match.id} - ${match.name || match.code}`).join('; ');
+      const scan = { id: String(scanId), code, name: '', desc: '', qty: '', status, match_ids: matchIds.join(','), match_text: matchText, scanned_at: now, updated_at: now };
 
       await kv.hset(`scan:${scanId}`, scan);
       await kv.lpush('scan:ids', String(scanId));
       await kv.sadd(`code_to_scan_ids:${code}`, String(scanId)); // Add scanId to the set of scans for this code
-      return res.json({ success: true, status: isDuplicate ? 'duplicate' : 'unique', id: String(scanId), scan });
+      return res.json({ success: true, status: isDuplicate ? 'duplicate' : 'unique', id: String(scanId), scan, matches });
     }
 
     if (action === 'update') {

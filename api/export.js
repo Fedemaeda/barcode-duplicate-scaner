@@ -19,7 +19,7 @@ module.exports = async function handler(req, res) {
       ids.forEach(id => pipe.hgetall(`scan:${id}`));
       const results = await pipe.exec();
       results.filter(Boolean).forEach(p => {
-        products.push({ Código: p.code, Nombre: p.name || '', Descripción: p.desc || '', Cantidad: p.qty || '', Estado: p.status || '', Escaneado: p.scanned_at || '', Actualizado: p.updated_at || '' });
+        products.push({ Código: p.code, Nombre: p.name || '', Descripción: p.desc || '', Cantidad: p.qty || '', Estado: p.status || '', Coincidencia: p.match_text || '', Escaneado: p.scanned_at || '', Actualizado: p.updated_at || '' });
       });
     }
 

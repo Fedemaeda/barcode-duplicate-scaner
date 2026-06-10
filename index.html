@@ -144,7 +144,7 @@ function onScan(code) {
   fetch('/api/app', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'scan', code, token: TOKEN }) })
   .then(r => r.json()).then(d => {
     if (d.success) {
-      if (d.status === 'duplicate') { setScanStatus('⚠️ Ya existe: ' + code, 'duplicate'); showToast('⚠️ Código ' + code + ' ya está registrado', 'duplicate'); }
+      if (d.status === 'duplicate') { var matchMsg = (d.matches || []).map(function(m){ return '#' + m.id + ' - ' + (m.name || m.code); }).join('; '); setScanStatus('⚠️ Ya existe: ' + code, 'duplicate'); showToast('⚠️ Coincide con ' + (matchMsg || code), 'duplicate'); }
       else { setScanStatus('✅ ' + code, 'success'); }
       loadProducts();
     } else { setScanStatus('Error: ' + code, 'error'); }
@@ -161,7 +161,7 @@ function renderTable(products) {
   var container = document.getElementById('table-body');
   document.getElementById('count-badge').textContent = products.length;
   if (!products.length) { container.innerHTML = '<div class="empty-state"><div style="font-size: 40px;">📦</div><p>Escaneá tu primer producto</p></div>'; return; }
-    var h = '<table><thead><tr><th>Código</th><th>Nombre</th><th>Descripción</th><th>Cantidad</th><th>Estado</th><th>Fecha</th><th></th></tr></thead><tbody>';
+    var h = '<table><thead><tr><th>Código</th><th>Nombre</th><th>Descripción</th><th>Cantidad</th><th>Estado</th><th>Coincidencia</th><th>Fecha</th><th></th></tr></thead><tbody>';
   products.forEach(function(p) {
     var statusClass = (p.status||'').indexOf('REPETIDO') >= 0 ? 'status-dup' : 'status-uniq';
     h += '<tr><td class="code-cell" title="'+p.code+'">'+p.code+'</td>';
@@ -169,6 +169,7 @@ function renderTable(products) {
     h += '<td><span class="editable" onclick="editField(this,\''+p.id+'\',\'desc\')" data-id="'+p.id+'" data-field="desc">'+esc(p.desc)+'</span></td>';
     h += '<td>'+esc(p.qty || '')+'</td>';
     h += '<td class="'+statusClass+'">'+esc(p.status || '')+'</td>';
+    h += '<td>'+esc(p.match_text || '')+'</td>';
     h += '<td class="date-cell">'+formatDate(p.scanned_at)+'</td>';
     h += '<td class="actions-cell"><button class="btn-delete" onclick="deleteProduct(\''+p.id+'\')">✕</button></td></tr>';
   });

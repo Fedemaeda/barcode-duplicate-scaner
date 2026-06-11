@@ -40,6 +40,9 @@
     .scan-status.success { color: #6abf8a; }
     .scan-status.duplicate { color: #f0a070; }
     .scan-status.error { color: #ff8a8a; }
+    .barcode-input { width: 100%; padding: 14px 16px; border: 2px solid #e8e0f0; border-radius: 12px; font-size: 18px; font-family: 'Courier New', monospace; color: #4a4a6a; outline: none; background: #faf8ff; transition: border-color 0.3s; text-align: center; letter-spacing: 2px; }
+    .barcode-input:focus { border-color: #b8a9ff; }
+    .barcode-input::placeholder { font-family: 'Inter', sans-serif; letter-spacing: 0; font-size: 14px; color: #c0c0d8; }
     .table-section { background: white; margin: 16px; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.04); overflow-x: auto; }
     .table-header { padding: 16px 16px 8px; font-size: 13px; font-weight: 600; color: #a0a0b8; text-transform: uppercase; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center; }
     .count-badge { background: #f0ecf8; padding: 2px 10px; border-radius: 20px; font-size: 12px; }
@@ -65,7 +68,8 @@
     .toast.success { border-left: 4px solid #6abf8a; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     .table-section { animation: fadeIn 0.4s ease; }
-    @media (min-width: 768px) { #dashboard { max-width: 960px; margin: 0 auto; padding-bottom: 40px; } .scanner-section { max-width: 500px; } }
+    @media (min-width: 768px) { #dashboard { max-width: 960px; margin: 0 auto; padding-bottom: 40px; } .scanner-section { max-width: 500px; } #reader { display: none; } .barcode-input { font-size: 22px; padding: 16px 20px; } }
+    @media (max-width: 767px) { .barcode-input { font-size: 16px; padding: 10px 14px; } }
     @media (max-width: 500px) { .login-card { padding: 32px 24px; } .header { padding: 12px 16px; } .header h1 { font-size: 16px; } .btn-icon { font-size: 12px; padding: 6px 10px; } td { font-size: 13px; padding: 8px; } .code-cell { max-width: 80px; font-size: 12px; } }
   </style>
 </head>
@@ -96,6 +100,7 @@
   <div class="scanner-section" id="scanner-section">
     <div class="scanner-label">📷 Escanear código</div>
     <div id="reader"></div>
+    <input type="text" id="barcode-input" class="barcode-input" placeholder="Escanéa o escribí el código..." autocomplete="off">
     <div class="scan-status" id="scan-status">Esperando código...</div>
   </div>
   <div class="table-section">
@@ -130,7 +135,8 @@ document.getElementById('login-form').addEventListener('submit', function(e) {
 });
 
 function logout() { TOKEN = null; localStorage.removeItem('token'); stopScanner(); stopPolling(); document.getElementById('dashboard').classList.add('hidden'); document.getElementById('login-screen').classList.remove('hidden'); }
-function showDashboard() { document.getElementById('login-screen').classList.add('hidden'); document.getElementById('dashboard').classList.remove('hidden'); loadProducts(); startScanner(); startPolling(); }
+function showDashboard() { document.getElementById('login-screen').classList.add('hidden'); document.getElementById('dashboard').classList.remove('hidden'); loadProducts(); startScanner(); startPolling(); setTimeout(function(){ document.getElementById('barcode-input').focus(); }, 300); }
+document.addEventListener('DOMContentLoaded', function(){ document.getElementById('barcode-input').addEventListener('keydown', function(e){ if (e.key === 'Enter') { var val = this.value.trim(); if (val) { onScan(val); this.value = ''; } } }); });
 function startScanner() { stopScanner(); try { QR = new Html5Qrcode('reader'); QR.start({ facingMode: 'environment' }, { fps: 10, qrbox: function(vw, vh) { var m = Math.min(vw, vh) * 0.7; return { width: m, height: m * 0.5 }; }}, onScan, function(){}); } catch(e){} }
 function stopScanner() { if (QR) { try { QR.stop(); QR.clear(); } catch(e){} QR = null; } }
 function startPolling() { stopPolling(); resetIdleTimer(); pollTimer = setInterval(function(){ if (isIdle && !document.querySelector('.edit-input')) loadProducts(); }, 3000); var envs = ['mousemove', 'keydown', 'scroll', 'click', 'touchstart']; envs.forEach(function(evt) { document.addEventListener(evt, resetIdleTimer); }); document.addEventListener('visibilitychange', onFocus); }
@@ -149,7 +155,7 @@ function onScan(code) {
       loadProducts();
     } else { setScanStatus('Error: ' + code, 'error'); }
   }).catch(() => { setScanStatus('Error de conexión', 'error'); })
-  .finally(() => { setTimeout(function(){ scanning = false; }, 2000); });
+  .finally(() => { setTimeout(function(){ scanning = false; document.getElementById('barcode-input').focus(); }, 2000); });
 }
 function setScanStatus(text, cls) { var el = document.getElementById('scan-status'); el.textContent = text; el.className = 'scan-status ' + (cls||''); }
 

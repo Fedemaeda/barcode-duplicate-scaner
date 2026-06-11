@@ -26,6 +26,7 @@
     #dashboard { padding: 0; }
     .header { background: white; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 12px rgba(0,0,0,0.04); position: sticky; top: 0; z-index: 10; }
     .header h1 { font-size: 18px; font-weight: 700; color: #4a4a6a; }
+    .header .version { font-size: 11px; font-weight: 500; color: #b8a9ff; background: #f0ecf8; padding: 2px 8px; border-radius: 10px; margin-left: 8px; vertical-align: middle; }
     .header-actions { display: flex; gap: 8px; align-items: center; }
     .btn-icon { padding: 8px 14px; border: none; border-radius: 10px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; font-family: inherit; background: #f0ecf8; color: #4a4a6a; }
     .btn-icon:hover { background: #e4dcf0; }
@@ -88,7 +89,7 @@
 </div>
 <div id="dashboard" class="hidden">
   <div class="header">
-    <h1>DupliScan</h1>
+    <h1>DupliScan <span class="version">Versión 2.0</span></h1>
     <div class="header-actions">
       <button class="btn-icon export" onclick="openImport()">📤 Importar Excel</button>
       <input type="file" id="import-file" class="hidden" accept=".xlsx,.xls" onchange="handleImportFile(this.files[0])">

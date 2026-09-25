@@ -2,6 +2,10 @@
   "version": 2,
   "buildCommand": null,
   "outputDirectory": ".",
+  "crons": [
+    { "path": "/api/pulse", "schedule": "0 7 * * *" },
+    { "path": "/api/pulse", "schedule": "0 19 * * *" }
+  ],
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ]
